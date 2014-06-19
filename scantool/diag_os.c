@@ -150,10 +150,10 @@ diag_os_init(void)
 //different os_millisleep implementations
 #if defined(__linux__) && (TRY_POSIX == 0)
 
+#if 1
 int
 diag_os_millisleep(int ms)
 {
-
 	int i, fd, retval;
 	unsigned long tmp,data;
 	struct rtc_time rtc_tm;
@@ -205,7 +205,7 @@ diag_os_millisleep(int ms)
 		}
 		data >>= 8;
 		i+=(int)data;
-		if (i>=(ms*2))
+		if (i>=ms)
 			break;
 	}
 
@@ -222,7 +222,7 @@ diag_os_millisleep(int ms)
 }
 
 //old millisleep
-#if 0
+#else
 
 /*
 +* Original LINUX implementation for a millisecond sleep:
@@ -251,9 +251,6 @@ diag_os_millisleep(int ms)
 {
 	struct timespec rqst, resp;
 
-	if (ms > 1)
-		ms /= 2;
-
 	while (ms)
 	{
 		if (ms > 2)
@@ -281,6 +278,7 @@ diag_os_millisleep(int ms)
 
 		}
 	}
+// 	fflush(stdout);
 
 	return(0);
 }

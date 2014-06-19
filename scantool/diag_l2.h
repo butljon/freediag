@@ -170,7 +170,7 @@ struct diag_l2_conn
 						format */
 #define DIAG_L2_PROT_SAEJ1850	4	/* SAEJ1850 */
 #define DIAG_L2_PROT_CAN	5	/* CAN L2 (is this defined ??) */
-#define DIAG_L2_PROT_VAG	6	/* VAG ISO9141 based protocol */
+#define DIAG_L2_PROT_KW1281	6	/* VAG ISO9141 based protocol */
 #define DIAG_L2_PROT_MB1	7	/* MB protocol 1 */
 #define DIAG_L2_PROT_MB2	8	/* MB protocol 2 */
 #define DIAG_L2_PROT_MAX	9	/* Maximum number of protocols */

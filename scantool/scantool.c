@@ -705,7 +705,7 @@ clear_data(void)
  * If necessary tries to poll the ECU
  * returns L2 file descriptor
  */
-static struct diag_l2_conn * do_l2_common_start(int L1protocol, int L2protocol,
+struct diag_l2_conn * do_l2_common_start(int L1protocol, int L2protocol,
 	uint32_t type, int bitrate, target_type target, source_type source )
 {
 	int rv;
@@ -727,7 +727,8 @@ static struct diag_l2_conn * do_l2_common_start(int L1protocol, int L2protocol,
 		rv = diag_geterr();
 		if ((rv != DIAG_ERR_BADIFADAPTER) &&
 			(rv != DIAG_ERR_PROTO_NOTSUPP))
-			fprintf(stderr, "Failed to open hardware interface\n");
+			fprintf(stderr, "Failed to open hardware interface protocol %d with %s on %s\n",
+				set_L1protocol,l0_names[set_interface_idx].longname,set_subinterface);
 
 		return (struct diag_l2_conn *)diag_pseterr(rv);
 	}
@@ -1581,16 +1582,6 @@ diag_cleardtc(void)
 
 	return rv;
 }
-
-typedef int (start_fn)(int);
-
-struct protocol {
-	const char	*desc;
-	start_fn *start;
-	int	flags;
-	int	protoID;
-	int	conmode;
-};
 
 const struct protocol protocols[] = {
 	{"SAEJ1850-VPW", do_l2_j1850_start, DIAG_L1_J1850_VPW, PROTOCOL_SAEJ1850, 0},

@@ -97,6 +97,7 @@ extern "C" {
  * Positive responses are  service ID + 0x40
  */
 #define DIAG_KW2K_RC_NR		0x7F	/* negative Response */
+#define DIAG_KW2K_RC_RDDBLI	0x61	/* readDataByLocalId RSP */
 
 
 /*

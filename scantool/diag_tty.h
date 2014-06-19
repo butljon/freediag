@@ -182,6 +182,10 @@ ssize_t diag_tty_read(struct diag_l0_device *dl0d,
 	void *buf, size_t count, int timeout);
 ssize_t diag_tty_write(struct diag_l0_device *dl0d,
 	const void *buf, const size_t count);
+
+ssize_t diag_tty_write(struct diag_l0_device *dl0d,
+	const void *buf, const size_t count);
+
 int diag_tty_break(struct diag_l0_device *dl0d, const int);
 
 #if defined(__cplusplus)

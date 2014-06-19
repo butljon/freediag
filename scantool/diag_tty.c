@@ -833,6 +833,177 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 }
 #endif
 
+ssize_t
+diag_tty_slow_write(struct diag_l0_device *dl0d,
+const void *buf, const size_t count)
+{
+//        int   ms = 950 * dl0d->ttystate->dt_sinfo.custom_divisor/24000000;
+#if 1
+	/* for rtc interrupt: */
+  	int ms = 204;
+#else
+	/* for nanosleep interrupt (try up to 191 / 192): */
+  	int ms = 191;
+#endif
+	short   bits, parBit, stpBit, i, high=1, parity;
+	size_t num;
+	char message_buff[3];
+
+	if((dl0d->ttystate->dt_tinfo.c_cflag & CS8) == CS8) {
+	  bits = diag_databits_8;
+	  sprintf(&message_buff[0], "%c", '8');
+	}
+	if((dl0d->ttystate->dt_tinfo.c_cflag & CS8) == CS7) {
+	  bits = diag_databits_7;
+	  sprintf(&message_buff[0], "%c", '7');
+	}
+	if((dl0d->ttystate->dt_tinfo.c_cflag & CS8) == CS6) {
+	  bits = diag_databits_6;
+	  sprintf(&message_buff[0], "%c", '6');
+	}
+	if((dl0d->ttystate->dt_tinfo.c_cflag & CS8) == CS5) {
+	  bits = diag_databits_5;
+	  sprintf(&message_buff[0], "%c", '5');
+	}
+        if((dl0d->ttystate->dt_tinfo.c_cflag & PARENB) == PARENB) {
+	  parBit = diag_par_e;
+	  sprintf(&message_buff[1], "%c", 'E');
+	}
+        if((dl0d->ttystate->dt_tinfo.c_cflag & (PARENB | PARODD)) == (PARENB | PARODD)) {
+	  parBit = diag_par_o; 
+	  sprintf(&message_buff[1], "%c", 'O');
+	}
+        if(!(dl0d->ttystate->dt_tinfo.c_cflag & PARENB)) {
+	  parBit = diag_par_n;
+	  sprintf(&message_buff[1], "%c", 'N');
+	}
+        if((dl0d->ttystate->dt_tinfo.c_cflag & CSTOPB) == CSTOPB) {
+	  stpBit = diag_stopbits_2;
+	  sprintf(&message_buff[2], "%c", '2');
+	}
+        if((dl0d->ttystate->dt_tinfo.c_cflag & ~CSTOPB) != CSTOPB) {
+	  stpBit = diag_stopbits_1;
+	  sprintf(&message_buff[2], "%c", '1');
+	}
+
+// start bit
+	if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
+		fprintf(stderr, 
+			FLFMT "open: Ioctl TIOCSBRK failed %s\n", FL, strerror(errno));
+		return diag_iseterr(DIAG_ERR_GENERAL);
+	}
+        high = 0;
+	printf("Init bits: 0");
+	diag_os_millisleep(ms);
+	
+	for(num=0; num < count; num++) {
+	    parity = 1;
+            for(i=0; i< bits; i++) {
+	        if(*((char *) (buf+num)) & (1<<i)) {
+		  parity *= -1;
+		  if(!high) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCCBRK failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=1;
+		  }
+		} else {
+		  if(high) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCSBRK failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=0;
+		  }
+		}
+                 if(high)
+		  printf("1");
+		else
+ 		  printf("0");
+                diag_os_millisleep(ms);
+	    }
+// parity bit
+	    if(parBit == diag_par_e) {
+	      if (parity < 0) {
+		if(!high) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCCBRK2 failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=1;
+		}
+	      } else {
+		if(high) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCSBRK2 failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=0;
+	        }
+	      }
+                 if(high)
+		  printf("1");
+		else
+		  printf("0");
+	      diag_os_millisleep(ms);
+	    }
+	    if(parBit == diag_par_o) {
+	      if (parity > 0) {
+		if(!high) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCCBRK3 failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=1;
+		}
+	      } else {
+		if(high) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
+		          fprintf(stderr, 
+			      FLFMT "open: Ioctl TIOCSBRK3 failed %s\n", FL, strerror(errno));
+		          return diag_iseterr(DIAG_ERR_GENERAL);
+		      }
+		      high=0;
+	        }
+	      }
+                 if(high)
+		  printf("1");
+		else
+ 		  printf("0");
+	      diag_os_millisleep(ms);
+	    }
+// stop bit(s)
+            if(!high) {
+	         if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
+		     fprintf(stderr, 
+			FLFMT "open: Ioctl TIOCCBRK2 failed %s\n", FL, strerror(errno));
+		     return diag_iseterr(DIAG_ERR_GENERAL);
+		 }
+		 high=1;
+	    }
+	    if (stpBit == diag_stopbits_1) {
+	      printf("1");
+  	      diag_os_millisleep(ms);
+	    } else {
+	      diag_os_millisleep(2*ms);
+	      printf("11");
+	    }
+
+	}
+
+	printf(", which is ");
+	for(num=0; num < count; num++)
+	  printf("<%d>", *(char *) (buf+num));
+	printf(", %.*s at 5 bps\n", 3, (char *) &message_buff);
+
+	return count;
+}
 
 //different _iflush implementations (POSIX or not)
 #if defined(__linux__) && (TRY_POSIX == 0)

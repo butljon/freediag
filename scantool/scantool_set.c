@@ -43,6 +43,7 @@ int 	set_speed;	/* Comms speed */
 unsigned char	set_testerid;	/* Our tester ID */
 int	set_addrtype;	/* Use virtual addressing */
 unsigned char	set_destaddr;	/* Dest ECU address */
+unsigned char	store_set_destaddr;	/* Store dest ECU address */
 int	set_L1protocol;	/* L1 protocol type */
 int	set_L2protocol;	/* Protocol type */
 int	set_initmode;
@@ -55,7 +56,7 @@ const char *	set_ecu;	/* ECU name */
 //const char  *	set_interface;	/* H/w interface to use */
 #define DEFAULT_INTERFACE 5	//index into l0_names below
 const struct l0_name l0_names[] = { {"MET16", MET16}, {"SE9141", SE9141}, {"VAGTOOL", VAGTOOL},
-			{"BR1", BR1}, {"ELM", ELM}, {"CARSIM", CARSIM}, {"DUMB", DUMB}, NULL};
+			{"BR1", BR1}, {"ELM", ELM}, {"CARSIM", CARSIM}, {"DUMB", DUMB}, {"FTDI", FTDI}, NULL};
 
 enum l0_nameindex set_interface;	//hw interface to use
 
@@ -75,6 +76,7 @@ int set_init(void)
 	set_testerid = 0xf1;	/* Our tester ID */
 	set_addrtype = 1;	/* Use virtual addressing */
 	set_destaddr = 0x33;	/* Dest ECU address */
+	store_set_destaddr = set_destaddr;
 	set_L1protocol = DIAG_L1_ISO9141;	/* L1 protocol type */
 	set_L2protocol = DIAG_L2_PROT_ISO9141;	/* Protocol type */
 	set_initmode = DIAG_L2_TYPE_FASTINIT ;
@@ -182,7 +184,7 @@ const struct cmd_tbl_entry set_cmd_table[] =
 const char * const l1_names[] =
 {
 	"ISO9141", "ISO14230",
-	"J1850-VPW", "J1850-PWM", "CAN", "", "", "RAW", NULL
+	"J1850-VPW", "J1850-PWM", "CAN", "KW1281", "KWP2000", "RAW", NULL
 };
 
 const char * const l2_names[] =
@@ -370,6 +372,7 @@ cmd_set_destaddr(int argc, char **argv)
 			printf("destaddr: must be between 0 and 0xff\n");
 		else
 			set_destaddr = tmp;
+			store_set_destaddr = set_destaddr;
 	}
 	else
 	{

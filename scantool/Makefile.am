@@ -22,17 +22,17 @@ noinst_LIBRARIES=libdiag.a libdyno.a
 #libdiag.a.: diag_config.c
 libdiag_a_SOURCES=diag_config.c \
 	diag_l0_se.c diag_l0_me.c diag_l0_vw.c diag_l0_br.c diag_l0_elm.c diag_l0_sim.c\
-	diag_l0_dumb.c\
+	diag_l0_dumb.c diag_l0_ftdi.c\
 	diag_tty.c \
 	diag_l1.c \
 	diag_l2.c diag_l2_can.c diag_l2_raw.c \
         diag_l2_iso9141.c diag_l2_iso9141.c diag_l2_iso14230.c \
-	diag_l2_saej1850.c diag_l2_vag.c diag_l2_mb1.c \
+	diag_l2_saej1850.c diag_l2_kw1281.c diag_l2_mb1.c \
 	diag_l3.c diag_l3_saej1979.c diag_l3_iso14230.c diag_l3_vag.c \
 	diag_os.c diag_general.c diag_dtc.c \
 	diag.h diag_os.h diag_dtc.h diag_err.h diag_l1.h diag_l2.h \
 	diag_iso14230.h diag_tty.h diag_l2_can.h diag_l2_iso14230.h \
-	diag_l2_raw.h diag_l2_mb1.h diag_l2_saej1850.h diag_vag.h diag_l2_vag.h \
+	diag_l2_raw.h diag_l2_mb1.h diag_l2_saej1850.h diag_vag.h diag_l2_kw1281.h \
 	diag_l3_saej1979.h diag_mb1.h
 nodist_libdiag_a_SOURCES=diag_config.c
 

@@ -1022,9 +1022,16 @@ rc_file(void)
 void
 enter_cli(char *name)
 {
+	time_t current_time;
+	char* c_time_string;
+ 
 	global_logfp = NULL;
 	progname = name;
+	
+	current_time = time(NULL);
+	c_time_string = ctime(&current_time);
 
+	printf("%s: %s", progname, c_time_string);
 	printf("%s: version %s\n", progname, PACKAGE_VERSION);
 	printf("%s: Type HELP for a list of commands\n", progname);
 	printf("%s: Type SCAN to start ODBII Scan\n", progname);

@@ -1,9 +1,12 @@
-#ifndef _DIAG_L2_ISO14230_H_
-#define _DIAG_L2_ISO14230_H_
+#ifndef _DIAG_L2_KW1281_H_
+#define _DIAG_L2_KW1281_H_
 /*
+ * !!! INCOMPLETE !!!!
+ *
  *	freediag - Vehicle Diagnostic Utility
  *
- * CVSID $Id: diag_l2_iso14230.h,v 1.1.1.1 2004/06/05 01:56:42 sjbaker Exp $
+ * CVSID $Id: diag_l2_vag.h,v 1.1.1.1 2004/06/05 01:56:41 sjbaker Exp $
+ *
  *
  * Copyright (C) 2001 Richard Almeida & Ibex Ltd (rpa@ibex.co.uk)
  *
@@ -25,7 +28,7 @@
  *
  * Diag
  *
- * L2 driver for ISO14230-2 layer 2
+ * L2 driver for Volkswagen Audi Group protocol (Keyword 0x01 0x8a)
  *
  */
 
@@ -33,13 +36,9 @@
 extern "C" {
 #endif
 
-int diag_l2_14230_add(void);
-
-void
-l2_iso14230_data_rcv(void *handle __attribute__((unused)),
-struct diag_msg *msg);
+int diag_l2_kw1281_add(void);
 
 #if defined(__cplusplus)
 }
 #endif
-#endif /* _DIAG_L2_ISO14230_H_ */
+#endif /* _DIAG_L2_KW1281_H_ */

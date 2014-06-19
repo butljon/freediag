@@ -115,7 +115,30 @@ extern "C" {
 #define DIAG_VAG_CMD_LOGIN	0x2B
 
 #define DIAG_VAG_RSP_ASCII	0XF6
-#define DIAG_VAG_RSP_HEX	0XFC
+#define DIAG_VAG_RSP_DTC_RQST	0XFC
+#define DIAG_VAG_RSP_CHAN_READ	0XE6
+#define DIAG_VAG_RSP_DATA_OTHER	0XE7
+
+#define DIAG_VAG_END_FRAME      0x03
+
+/*
+ * Freediag specific commands only for application internal.
+ * These are NOTHING to do with actual VAG protocol values.
+ */
+#define DIAG_VAG_MONITOR        0x90
+#define DIAG_VAG_STOP_MONITOR   0x91
+#define DIAG_VAG_SHOW_MONITOR   0x92
+
+
+
+/*
+ * Prototypes
+ */
+void
+l2_kw1281_data_rcv(void *handle, struct diag_msg *msg);
+
+#define KW_1281_TIM_MIN_P3      100
+#define KW_1281_TIM_MAX_P3      1000
 
 #if defined(__cplusplus)
 }

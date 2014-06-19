@@ -48,6 +48,16 @@ int htoi(char *buf);
 int cmd_up(int argc, char **argv);
 int cmd_exit(int argc, char **argv);
 
+typedef int (start_fn)(int);
+
+struct protocol {
+	const char	*desc;
+	start_fn *start;
+	int	flags;
+	int	protoID;
+	int	conmode;
+};
+
 /* Structure to hold responses */
 typedef struct response
 {
@@ -116,7 +126,7 @@ extern struct diag_l0_device *global_l2_dl0d;	/* L2 file descriptor */
 #define	PROTOCOL_SAEJ1850	3
 
 //XXX The following defs should probably go in an auto-generated l0_list.h file
-enum l0_nameindex {MET16, SE9141, VAGTOOL, BR1, ELM, CARSIM, DUMB};
+enum l0_nameindex {MET16, SE9141, VAGTOOL, BR1, ELM, CARSIM, DUMB, FTDI};
 struct l0_name
 {
 	char * longname;
@@ -145,6 +155,8 @@ int do_j1979_getdtcs(void);
 int do_j1979_getO2sensors(void);
 int diag_cleardtc(void);
 int ecu_connect(void);
+struct diag_l2_conn * do_l2_common_start(int L1protocol, int L2protocol,
+	uint32_t type, int bitrate, target_type target, source_type source );
 
 struct diag_msg *find_ecu_msg(int byte, databyte_type val);
 
@@ -188,6 +200,7 @@ extern int 	set_speed ;	/* Comms speed */
 extern unsigned char	set_testerid ;	/* Our tester ID */
 extern int	set_addrtype ;	/* Address type, 1 = functional */
 extern unsigned char	set_destaddr ;	/* Dest ECU address */
+extern unsigned char	store_set_destaddr ;	/* Store dest ECU address */
 extern int	set_L1protocol ;	/* L1 (H/W) Protocol type */
 extern int	set_L2protocol ;	/* L2 (S/W) Protocol type */
 extern int	set_initmode ;
@@ -199,7 +212,6 @@ extern const char*	set_ecu;	/* ECU name */
 extern enum l0_nameindex set_interface;	/* Physical interface name to use */
 int set_interface_idx;	//index into l0_names
 extern const struct l0_name l0_names[];	//filled in scantool_set.c
-
 #define SUBINTERFACE_MAX 256
 extern char	set_subinterface[SUBINTERFACE_MAX];	/* Sub interface ID */
 

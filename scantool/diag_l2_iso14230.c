@@ -41,6 +41,8 @@
 #include "diag_l2.h"
 #include "diag_err.h"
 #include "diag_iso14230.h"
+#include "diag_l2_iso9141.h"
+#include "diag_vag.h"
 
 #include "diag_l2_iso14230.h" /* prototypes for this file */
 
@@ -73,10 +75,31 @@ struct diag_l2_14230
 #define STATE_CONNECTING  1	/* Connecting */
 #define STATE_ESTABLISHED 2	/* Established */
 
-
 /*
  * Useful internal routines
  */
+
+static target_type
+Iso14230ToVAG(target_type in)
+{
+  /*
+   * Ridiculous, in VAG at least, kwp2k physical ECU addresses differ to
+   * the addresses (in kw1281) used for slowinit, see Appendix,
+   * http://read.pudn.com/downloads118/ebook/500929/14230-2.pdf
+   * 
+   * For KWP2K ABS controller on my VW Golf IV, need address 0x28
+   * which is translated here to 0x03 for the 5BAUD init
+   * 
+   */
+  if(0x10 <= in && in <= 0x17)
+    return DIAG_VAG_ECU_ENGINE;
+  if(0x28 <= in && in <= 0x2F)
+    return DIAG_VAG_ECU_ABS;
+  else {
+    fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
+    return in;
+  }
+}
 
 /*
  * Decode the message header, returning the length
@@ -189,6 +212,56 @@ diag_l2_proto_14230_decode(uint8_t *data, int len,
 	return (*hdrlen + *datalen + 1);
 }
 
+/* basic ISO14230 callback routine */
+#ifdef WIN32
+void
+l2_iso14230_data_rcv(void *handle,
+struct diag_msg *msg)
+#else
+void
+l2_iso14230_data_rcv(void *handle __attribute__((unused)),
+struct diag_msg *msg)
+#endif
+{
+	int i;
+	struct diag_msg *tmsg;
+	/*
+	 * Layer 2 call back, just print the data, this is used if we
+	 * do a "read" and we haven't yet added a L3 protocol
+	 */
+
+	tmsg = msg;
+	while(tmsg) {
+
+	  switch (tmsg->data[0]) {
+
+		case DIAG_KW2K_RC_RDDBLI:
+		  for(i=2; i< tmsg->len; i+=3) {
+//		    if(tmsg->data[i] != 0x25) {
+		    printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
+		    printf("sensor bytes: <%x>", tmsg->data[i+1]);
+		    printf("<%x>\n", tmsg->data[i+2]);
+		    decode_value(tmsg, i);
+//		    }
+		  }
+		  printf("\n");
+		  break;
+		default:
+//	          printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
+	          printf("len <%x> data ", tmsg->len);
+	          for(i=0; i<tmsg->len; i++)
+	            printf("<%x>", tmsg->data[i]);
+	          printf("\n");
+	          for(i=0; i<tmsg->len; i++)
+	            printf("%c", tmsg->data[i]);
+	          printf("\n");
+	  }
+	  tmsg = tmsg->next;
+	}
+
+	return;	
+}
+
 /*
  * Internal receive function (does all the message building, but doesn't
  * do call back, returns the complete message, hasn't removed checksum
@@ -262,7 +335,6 @@ diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 		fprintf(stderr, FLFMT "before recv, state %d timeout %d, rxoffset %d\n",
 			FL, state, tout, dp->rxoffset);
 #endif
-
 		/*
 		 * In l1_doesl2frame mode, we get full frames, so we don't
 		 * do the read in state2
@@ -476,7 +548,7 @@ diag_l2_proto_14230_startcomms( struct diag_l2_conn	*d_l2_conn, flag_type flags,
 	int rv, wait_time;
 	int hdrlen, datalen, datasrc;
 	uint8_t cbuf[MAXRBUF];
-	int len;
+	int len, i, parity=1;
 	int timeout;
 	struct diag_serial_settings set;
 
@@ -617,7 +689,7 @@ diag_l2_proto_14230_startcomms( struct diag_l2_conn	*d_l2_conn, flag_type flags,
 	/* 5 Baud init */
 	case DIAG_L2_TYPE_SLOWINIT:
 		in.type = DIAG_L1_INITBUS_5BAUD;
-		in.addr = target;
+		in.addr = Iso14230ToVAG(target);
 		rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
 		if (rv < 0)
 			break;
@@ -643,21 +715,70 @@ diag_l2_proto_14230_startcomms( struct diag_l2_conn	*d_l2_conn, flag_type flags,
 		if ( (d_l2_conn->diag_link->diag_l2_l1flags
 			& DIAG_L1_DOESSLOWINIT) == 0) {
 
+			diag_os_millisleep(W4min);
+
 			/*
 			 * Now transmit KB2 inverted
 			 */
-			cbuf[0] = ~ d_l2_conn->diag_l2_kb2;
+// original code	cbuf[0] = ~ d_l2_conn->diag_l2_kb2;
+			cbuf[0] = ~ cbuf[1];
 			rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 				cbuf, 1, d_l2_conn->diag_l2_p4min);
+
+		      if (d_l2_conn->diag_l2_kb2 == 0x0f) {
+		    /* KWP20x */
+		    /* perform some KWP20x consistency checks, see ISO 14230 */
+			if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
+			  fprintf(stderr, FLFMT "Wierd KWP20x protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
+				FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
+			  return -1;
+			}
+		
+			fprintf(stderr, "KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
+			
+		      } else {
+			  if (d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
+			  /* (VAG) KW1281 */
+			    fprintf(stderr, FLFMT "Looks like VAG KW1281 protocol\n", FL);
+			    return -1;
+			  } else {
+			      fprintf(stderr, FLFMT "Some kind of wierd protocol with keybytes <%x><%x> which would be KWP%d\n", FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2, (d_l2_conn->diag_l2_kb1+128*d_l2_conn->diag_l2_kb2) );
+			      return -1;
+			  }
+			  
+		      }
 
 			/*
 			 * And wait for the address byte inverted
 			 */
-			rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-				cbuf, 1, 350);
+//			rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
+//				cbuf, 1, 350);
+		      rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
+				&cbuf[0], 1, d_l2_conn->diag_l2_p3min);
 
-			if (cbuf[0] != ((~target) & 0xFF) )
-				return diag_iseterr(DIAG_ERR_WRONGKB);
+		      if (rv < 0) {
+	  	   	  fprintf(stderr,
+		 		FLFMT "Failed to receive what should be compliment of ECU address (compliment of %x)\n", FL, target);
+	  	  	  return rv;
+		      }
+
+		      /*
+		       * in.addr was sent 7O1; we appear to receive, echoed back from ECU,
+		       * the inverse of in.addr sent 7O1 ... but we are working here 8N1,
+		       * so need this: 
+		       */
+		      for(i=0; i< 7; i++)
+			if( in.addr & (1<<i))
+			  parity *= -1;
+		      if(parity > 0)
+			cbuf[0] += 0x80;
+
+		      if (cbuf[0] != ((~in.addr) & 0xFF) ) {
+	  	   	  fprintf(stderr,
+		 		FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
+			  return diag_iseterr(DIAG_ERR_WRONGKB);
+		      }
+
 		}
 
 		dp->state = STATE_ESTABLISHED ;
@@ -696,7 +817,6 @@ diag_l2_proto_14230_startcomms( struct diag_l2_conn	*d_l2_conn, flag_type flags,
 
 	/* And we're done */
 	dp->state = STATE_ESTABLISHED ;
-
 	return 0;
 }
 
@@ -705,15 +825,48 @@ static int
 diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
 #else
 static int
-diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX __attribute__((unused)))
+diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
 #endif
 {
-	/*
-	 * Send a stopcomms message, and wait for the +ve response, for upto
-	 * p3max - the layer 2 code that called this already turned off the
-	 * idle timer
-	 */
-/* XXX */
+	struct diag_l2_14230 *dp;
+	struct diag_msg	msg, *tmsg;
+	uint8_t buff;
+	int rv = 0;
+	uint8_t *data;
+
+	dp = (struct diag_l2_14230 *)pX->diag_l2_proto_data;
+
+	if(dp->state > STATE_CLOSED) {
+
+ 	  if (diag_calloc(&msg.data, 1)) {
+ 	    fprintf(stderr,
+ 		 	FLFMT "diag_calloc failed for StopDiagnosticSession service request\n", FL);
+ 	    return(DIAG_ERR_NOMEM);
+ 	  }
+ 	  msg.len = 1;
+ 	  buff = DIAG_KW2K_SI_STODS;
+    	  memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
+
+	  rv = diag_l2_send(pX, &msg);
+	  if (rv < 0) {
+		fprintf(stderr, FLFMT "failed to send StopDiagnosticSession service request\n", FL);
+		return rv;
+	  }
+	  free(msg.data);
+
+	  diag_os_millisleep(25);
+	  rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+
+// would like to check return code, but guess need do that in the callback by passing a HANDLE
+//	  tmsg = pX->diag_msg;
+//	  if((tmsg->data[0] != (DIAG_KW2K_SI_STODS+0x40))
+//	    && (tmsg->len != 1)) {
+	  if(rv <0) {
+		fprintf(stderr, FLFMT "StopDiagnosticSession service failed\n", FL);
+		return -1;
+	  }	  
+	  dp->state = STATE_CLOSED;
+	}
 
 	return 0;
 }
@@ -799,6 +952,13 @@ diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 	if (dp->state == STATE_ESTABLISHED)
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
+
+	if(buf[3] != DIAG_KW2K_SI_TP) {
+	  printf("Out-going message check: ");
+	  for (i=0; i< len; i++)
+	    printf("<%x>", buf[i]);
+	  printf("\n");
+	}
 	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		buf, len, d_l2_conn->diag_l2_p4min);
 
@@ -870,6 +1030,17 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
 		return (struct diag_msg *)diag_pseterr(rv);
 	}
 
+#if 1
+	rv = diag_l2_recv(d_l2_conn,
+		d_l2_conn->diag_l2_p2max + 10, l2_iso14230_data_rcv, NULL);
+
+	if (rv < 0) {
+		*errval = DIAG_ERR_TIMEOUT;
+		return (struct diag_msg *)diag_pseterr(rv);
+	}
+	
+	return NULL;
+#else	
 	while (1) {
 		rv = diag_l2_proto_14230_int_recv(d_l2_conn,
 			d_l2_conn->diag_l2_p2max + 10, NULL, NULL);
@@ -918,6 +1089,7 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
 	}
 	/* Return the message to user, who is responsible for freeing it */
 	return rmsg;
+#endif
 }
 
 /*
@@ -933,6 +1105,9 @@ diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn)
 	int timeout;
 
 	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
+
+	if(dp->state < STATE_ESTABLISHED)
+	  return;
 
 	/* XXX fprintf not async-signal-safe */
 	if (diag_l2_debug & DIAG_DEBUG_TIMER) {
@@ -976,6 +1151,8 @@ diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn)
 			timeout = 100;
 	}
 	(void)diag_l2_recv(d_l2_conn, timeout, NULL, NULL);
+	
+	return;
 }
 static const struct diag_l2_proto diag_l2_proto_14230 = {
 	DIAG_L2_PROT_ISO14230, DIAG_L2_FLAG_FRAMED | DIAG_L2_FLAG_DATA_ONLY

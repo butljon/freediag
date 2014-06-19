@@ -228,6 +228,21 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath=".\scantool\diag_l0_ftdi.c">
+					<FileConfiguration
+						Name="Debug|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath=".\scantool\diag_l1.c">
 					<FileConfiguration
 						Name="Debug|Win32">
@@ -363,7 +378,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath=".\scantool\diag_l2_vag.c">
+					RelativePath=".\scantool\diag_l2_kw1281.c">
 					<FileConfiguration
 						Name="Debug|Win32">
 						<Tool
@@ -573,7 +588,7 @@
 					RelativePath=".\scantool\diag_l2_saej1850.h">
 				</File>
 				<File
-					RelativePath=".\scantool\diag_l2_vag.h">
+					RelativePath=".\scantool\diag_l2_kw1281.h">
 				</File>
 				<File
 					RelativePath=".\scantool\diag_l3.h">
