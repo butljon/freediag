@@ -1,0 +1,13 @@
+*.o
+Makefile
+config.*
+scangui/.deps/
+scangui/Makefile
+scantool/.deps/
+scantool/Makefile
+scantool/diag_config.c
+scantool/diag_test
+scantool/libdiag.a
+scantool/libdyno.a
+scantool/scantool
+stamp-h1

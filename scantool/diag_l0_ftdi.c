@@ -324,16 +324,16 @@ diag_l0_ftdi_slowinit(struct diag_l0_device *dl0d, struct diag_l1_initbus_args *
 	struct diag_l0_ftdi_device *dev)
 {
 	char cbuf[MAXRBUF];
-	int xferd, rv;
-	int tout;
+	int xferd, rv, tout;
 	struct diag_serial_settings set;
-
-        if (diag_l0_debug & DIAG_DEBUG_PROTO)
+	
+	if (diag_l0_debug & DIAG_DEBUG_PROTO)
 	{
 		fprintf(stderr, FLFMT "slowinit link %p address 0x%x\n",
 			FL, dl0d, in->addr);
 	}
 
+	
 	/* Set to 7 O 1 */
 	set.databits = diag_databits_7;
 	set.stopbits = diag_stopbits_1;
@@ -341,11 +341,16 @@ diag_l0_ftdi_slowinit(struct diag_l0_device *dl0d, struct diag_l1_initbus_args *
 	/* and just to avoid divide by zero in diag_tty.c */
 	set.speed = 9600;
 
-	diag_tty_setup(dl0d, &set);
+	if(diag_tty_setup(dl0d, &set) < 0) {
+		fprintf(stderr, 
+			FLFMT "diag_tty_setup failed!\n", FL);
+		return diag_iseterr(DIAG_ERR_GENERAL);	  
+	}
 
 	/* Wait W0 (2ms or longer) leaving the bus at logic 1 */
-	diag_os_millisleep(2);
-//	diag_os_millisleep(200);
+//	diag_os_millisleep(2);
+	diag_os_millisleep(200);
+//	diag_os_millisleep(100);
 
 	/* Send the address as a single byte message */
   	diag_tty_slow_write(dl0d, &in->addr, 1);
@@ -385,17 +390,21 @@ diag_l0_ftdi_slowinit(struct diag_l0_device *dl0d, struct diag_l1_initbus_args *
 		}
 	}
 
-	(void)diag_tty_setup(dl0d, &dev->serial);
+	if(diag_tty_setup(dl0d, &dev->serial) < 0) {
+		fprintf(stderr, 
+			FLFMT "diag_tty_setup failed!\n", FL);
+		return diag_iseterr(DIAG_ERR_GENERAL);	  
+	}
 
  	if (dev->protocol == DIAG_L1_ISO9141)
  		tout = 750;		/* 2s is too long */
- 	else
+	else
 		tout = 300;		/* 300ms according to ISO14230-2 */
 
 	/*
 	 * Don't be too fast, wait W1 (20 to 300ms) before proceeding
 	 */
-// 	diag_os_millisleep(20);
+	diag_os_millisleep(100);
 
 	
 	/*
@@ -404,12 +413,14 @@ diag_l0_ftdi_slowinit(struct diag_l0_device *dl0d, struct diag_l1_initbus_args *
          * The 0x55 already appears to be transmitted 8N1 at the baud rate the ECU works with.
 	 */
 	rv = diag_tty_read(dl0d, cbuf, 1, tout);
+//	rv = diag_tty_read(dl0d, cbuf, 1, 4000);
 	if (rv < 0)
 	{
-		if (diag_l0_debug & DIAG_DEBUG_PROTO)
-			fprintf(stderr, FLFMT "slowinit link %p read timeout\n",
-				FL, dl0d);
+		fprintf(stderr, FLFMT "slowinit link %p read timeout, rv: %d\n",
+				FL, dl0d, rv);
 		return diag_iseterr(rv);
+// XXX
+	  
 	}
 	else
 	{
@@ -541,7 +552,11 @@ diag_l0_ftdi_initbus(struct diag_l0_device *dl0d, struct diag_l1_initbus_args *i
 	 * return the baud rate etc to what the user had set
 	 * because the init routines will have messed them up
 	 */
-	(void)diag_tty_setup(dl0d, &dev->serial);
+	if(diag_tty_setup(dl0d, &dev->serial) < 0) {
+		fprintf(stderr, 
+			FLFMT "diag_tty_setup failed!\n", FL);
+		return diag_iseterr(DIAG_ERR_GENERAL);	  
+	}
 
  	return rv;
 }

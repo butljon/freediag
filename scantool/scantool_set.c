@@ -47,6 +47,7 @@ unsigned char	store_set_destaddr;	/* Store dest ECU address */
 int	set_L1protocol;	/* L1 protocol type */
 int	set_L2protocol;	/* Protocol type */
 int	set_initmode;
+int set_interface_idx;
 
 int set_display;		/* English (1), or Metric (0) */
 

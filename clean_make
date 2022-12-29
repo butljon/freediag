@@ -1,0 +1,6 @@
+./configure
+make clean
+make
+cat config.h | sed 's/.*DONT_USE_RCFILE.*/\/\* #define DONT_USE_RCFILE \*\//' > tzgbeebq
+mv tzgbeebq config.h
+make

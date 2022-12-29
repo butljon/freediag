@@ -301,20 +301,44 @@ void decode_value(struct diag_msg *tmsg, int i)
     case 0x03:
       printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
       break;
+    case 0x04:
+      printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
+      break;
     case 0x05:
       printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
       break;
     case 0x06:
-    case 0x08:
     case 0x15:
+    case 0x16:
       printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
       break;
     case 0x07:
       printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
       break;
-//    case 0x08:
-//      printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
-//      break;
+    case 0x08:
+      printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
+      break;
+    case 0x09:
+      printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
+      break;    
+    case 0x0a:
+      printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
+      break;
+    case 0x0B:
+      printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
+      break;  
+    case 0x0c:
+      printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
+      break;  
+    case 0x0d:
+      printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
+      break;  
+    case 0x0e:
+      printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
+      break;
+    case 0x0F:
+      printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+      break;
     case 0x10:
       printf("8 bit block: <");
       value = tmsg->data[i+2];
@@ -324,18 +348,11 @@ void decode_value(struct diag_msg *tmsg, int i)
       }
       printf(">\n");
       break;
-    case 0x0B:
-      printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
-      break;
-    case 0x0F:
-      printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
-      break;
     case 0x17:
-      printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]/((double) tmsg->data[i+1] * 256)));
+      printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
       break;
     case 0x21:
-      temp = (tmsg->data[i+1]) ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]);
-      printf("Gaspedal angle(?): %f \%\n", temp);
+      printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
       break;
     default:
       printf("Don't know that unit, please add here!\n");
@@ -402,6 +419,13 @@ struct diag_msg *msg)
 		case DIAG_VAG_CMD_ACK:
 		/* not going to print ACKs */
 		  break;
+        case 0xf4:
+          printf("Group zero values: ");
+          printf("%d", tmsg->data[0]);
+		  for(i=1; i< tmsg->len; i++)
+		      printf(", %d", tmsg->data[i]);
+		  printf("\n");
+          break;
 		case 0x0a:
 		/* seems to just be an empty Group or Channel address ? */
 		  break;
@@ -784,7 +808,7 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 		&cbuf[0], 1, d_l2_conn->diag_l2_p3min);
 	if (rv < 0) {
 	  fprintf(stderr,
-		FLFMT "Failed to receive key mode byte\n", FL);
+		FLFMT "Failed to receive 1st key mode byte\n", FL);
 	  return rv;
 	}
 
@@ -792,7 +816,7 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 		&cbuf[1], 1, d_l2_conn->diag_l2_p3min);
 	if (rv < 0) {
 	  fprintf(stderr,
-		FLFMT "Failed to receive key mode byte\n", FL);
+		FLFMT "Failed to receive 2nd key mode byte\n", FL);
 	  return rv;
 	}
 

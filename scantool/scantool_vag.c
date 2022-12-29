@@ -222,7 +222,7 @@ do_l2_kwp20k_start(int init_type)
 
 
 const struct protocol protocols_vag[] = {
-    	{"KW1281", do_l2_kw1281_start, 0x01, PROTOCOL_ISO9141, DIAG_L2_TYPE_SLOWINIT},
+   	{"KW1281", do_l2_kw1281_start, 0x01, PROTOCOL_ISO9141, DIAG_L2_TYPE_SLOWINIT},
 	{"KWP2000", do_l2_kwp20k_start, DIAG_L2_TYPE_SLOWINIT, PROTOCOL_ISO14230, DIAG_L2_TYPE_SLOWINIT},
 };
 
@@ -487,17 +487,18 @@ char **argv __attribute__((unused)))
 	  }
   	}
   	else {
-	    i = atoi( argv[1]);
-	    snprintf(buff, 4, "%d", i);
-	    buff2[2] = malloc(4);
-	    memcpy(buff2[2], &buff[0], 4);
+        for(i=1; i<argc; i++) {
+            snprintf(buff, 4, "%d", atoi(argv[i]));
+            buff2[2] = malloc(4);
+            memcpy(buff2[2], &buff[0], 4);
 
-	    printf("Group read, group %d\n", i);
-	    rv = cmd_vag_request(3, buff2);
-	    if(rv != CMD_OK) {
-		fprintf(stderr, FLFMT "Failed read group %d\n", FL, i);
-		return CMD_FAILED;	      
-	  }
+            printf("Group read, group %d\n", atoi(argv[i]));
+            rv = cmd_vag_request(3, buff2);
+            if(rv != CMD_OK) {
+            fprintf(stderr, FLFMT "Failed read group %d\n", FL, atoi(argv[i]));
+            return CMD_FAILED;	      
+            }
+        }
 	}
 	
 

@@ -210,7 +210,7 @@ extern const char*	set_vehicle;	/* Vehicle name */
 extern const char*	set_ecu;	/* ECU name */
 
 extern enum l0_nameindex set_interface;	/* Physical interface name to use */
-int set_interface_idx;	//index into l0_names
+extern int set_interface_idx;	//index into l0_names
 extern const struct l0_name l0_names[];	//filled in scantool_set.c
 #define SUBINTERFACE_MAX 256
 extern char	set_subinterface[SUBINTERFACE_MAX];	/* Sub interface ID */

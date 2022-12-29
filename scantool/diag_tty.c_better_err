@@ -238,239 +238,6 @@ diag_l0_set_dl2_link(struct diag_l0_device *dl0d,
 	dl0d->dl2_link = dl2_link;
 }
 
-int
-diag_tty_check_set(int fd, struct termios *termios_p) {
-  
-
-	/* according to manpage tcsetattr returns success even if only one parameter setting was succesful:
-	 * therefore double check!
-	 */
-
-	struct termios termios_tmp;
-
-	
-	if (tcgetattr(fd, &termios_tmp) < 0) {
-		fprintf(stderr, 
-			FLFMT "Can't obtain attributes, tcgetattr returned \"%s\".\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-	
-	if(memcmp(&termios_tmp.c_iflag, &termios_p->c_iflag , sizeof(tcflag_t))) {
-		fprintf(stderr, 
-			FLFMT "c_iflag not set correctly\n", FL);
-		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-	if(memcmp(&termios_tmp.c_oflag, &termios_p->c_oflag , sizeof(tcflag_t))) {
-		fprintf(stderr, 
-			FLFMT "c_oflag not set correctly\n", FL);
-		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-/* 	if(memcmp(&termios_tmp.c_cflag, &termios_p->c_cflag , sizeof(tcflag_t))) {
- 		fprintf(stderr, 
- 			FLFMT "c_cflag not set correctly\n", FL);
- 		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-*/	if(memcmp(&termios_tmp.c_lflag, &termios_p->c_lflag , sizeof(tcflag_t))) {
-		fprintf(stderr, 
-			FLFMT "c_lflag not set correctly\n", FL);
-		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-	if(memcmp(&termios_tmp.c_cc, &termios_p->c_cc , sizeof(cc_t)*NCCS)) {
-		fprintf(stderr, 
-			FLFMT "c_cc not set correctly\n", FL);
-		return diag_iseterr(DIAG_ERR_GENERAL);	  
-	}
-
-	return 0;
-
-}
-/*
- * Set speed/parity etc
- */
-int
-new_diag_tty_setup(struct diag_l0_device *dl0d,
-	const struct diag_serial_settings *pset)
-{
-	int iflag;
-	int fd, rv;
-	struct diag_ttystate	*dt;
-	speed_t speed;
-
-	fd = dl0d->fd;
-	dt = dl0d->ttystate;
-	if (fd == -1 || dt == 0) {
-		fprintf(stderr, FLFMT "setup: something is not right\n", FL);
-		return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-
-	/* Copy original settings to "current" settings */
-	dt->dt_tinfo = dt->dt_otinfo;
-
-	/*
-	 * This sets the interface to the speed closest to that requested.
-	 */
-	if (diag_l0_debug & DIAG_DEBUG_IOCTL)
-	{
-		fprintf(stderr, FLFMT "setup: device fd %d dt %p ",
-			FL, fd, dt);
-		fprintf(stderr, "speed %d databits %d stopbits %d parity %d\n",
-			pset->speed, pset->databits, pset->stopbits, pset->parflag);
-	}
-	/* "stty raw"-like iflag settings: */
-	iflag = dt->dt_tinfo.c_iflag;
-
-	/* Clear a bunch of un-needed flags */
-
-	iflag  &= ~ (IGNBRK | BRKINT | IGNPAR | PARMRK
-		| INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON | IXOFF
-		| IXANY | IMAXBEL);
-#ifdef __linux__
-	iflag  &= ~(IUCLC);   /* Not in Posix */
-#endif
-
-	dt->dt_tinfo.c_iflag  = iflag;
-
-	dt->dt_tinfo.c_oflag &= ~(OPOST);
-
-	/* Clear canonical input and disable keyboard signals.
-	+* There is no need to also clear the many ECHOXX flags, both because
-	+* many systems have non-POSIX flags and also because the ECHO
-	+* flags don't don't matter when ICANON is clear.
-	 */
-	dt->dt_tinfo.c_lflag &= ~( ICANON | ISIG );
-
-	/* CJH: However, taking 'man termios' at its word, the ECHO flag is
-	     *not* affected by ICANON, and it seems we do need to clear it  */
-	dt->dt_tinfo.c_lflag &= ~ECHO;
-
-	/* Turn off RTS/CTS, and loads of others, similar to "stty raw" */
-	dt->dt_tinfo.c_cflag &= ~( CRTSCTS );
-	/* Turn on ... */
-	dt->dt_tinfo.c_cflag |= (CLOCAL);
-
-	dt->dt_tinfo.c_cflag &= ~CSIZE;
-	
-	dt->dt_tinfo.c_cflag &= ~CBAUD;
-
-/*	switch (pset->speed) {
-		case 1200:
-			speed= B1200;
-			break;
-		case 2400:
-			speed = B2400;
-			break;
-		case 4800:
-			speed = B4800;
-			break;
-		case 9600:
-			speed = B9600;
-			break;
-		case 10400:
-			fprintf(stderr, FLFMT "%d not supported as it is not standard baud rate, see termios.h"
-			    "to make this work custom baud rate setting must be fixed, see ftdi_sio.c for how it should be done \n", FL, pset->speed);
-			break;
-		default:
-			fprintf(stderr, FLFMT "bad speed setting used (%d)\n", FL, pset->speed);
-			return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-	if (cfsetispeed(&dt->dt_tinfo, speed) < 0) {
-		fprintf(stderr,
-			FLFMT "cfsetispeed failed: %s\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-	if (cfsetospeed(&dt->dt_tinfo, speed) < 0) {
-		fprintf(stderr,
-			FLFMT "cfsetospeed failed: %s\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-*/
-
-
-
-	switch (pset->speed) {
-		case 1200:
-			dt->dt_tinfo.c_cflag |= B1200;
-			break;
-		case 2400:
-			dt->dt_tinfo.c_cflag |= B2400;
-			break;
-		case 4800:
-			dt->dt_tinfo.c_cflag |= B4800;
-			break;
-		case 9600:
-			dt->dt_tinfo.c_cflag |= B9600;
-			break;
-		case 10400:
-			fprintf(stderr, FLFMT "%d not supported as it is not standard baud rate, see termios.h"
-			    "to make this work custom baud rate setting must be fixed, see ftdi_sio.c for how it should be done \n", FL, pset->speed);
-			break;
-		default:
-			fprintf(stderr, FLFMT "bad speed setting used (%d)\n", FL, pset->speed);
-			return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-	switch (pset->databits) {
-		case diag_databits_8:
-			dt->dt_tinfo.c_cflag |= CS8;
-			break;
-		case diag_databits_7:
-			dt->dt_tinfo.c_cflag |= CS7;
-			break;
-		case diag_databits_6:
-			dt->dt_tinfo.c_cflag |= CS6;
-			break;
-		case diag_databits_5:
-			dt->dt_tinfo.c_cflag |= CS5;
-			break;
-		default:
-			fprintf(stderr, FLFMT "bad bit setting used (%d)\n", FL, pset->databits);
-			return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-	switch (pset->stopbits) {
-		case diag_stopbits_2:
-			dt->dt_tinfo.c_cflag |= CSTOPB;
-			break;
-		case diag_stopbits_1:
-			dt->dt_tinfo.c_cflag &= ~CSTOPB;
-			break;
-		default:
-			fprintf(stderr, FLFMT "bad stopbit setting used (%d)\n",
-				FL, pset->stopbits);
-			return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-
-	switch (pset->parflag) {
-		case diag_par_e:
-			dt->dt_tinfo.c_cflag |= PARENB;
-			dt->dt_tinfo.c_cflag &= ~PARODD;
-			break;
-		case diag_par_o:
-			dt->dt_tinfo.c_cflag |= (PARENB | PARODD);
-			break;
-		case diag_par_n:
-			dt->dt_tinfo.c_cflag &= ~PARENB;
-			break;
-		default:
-			fprintf(stderr,
-				FLFMT "bad parity setting used (%d)\n", FL, pset->parflag);
-			return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-
-	errno = 0;
-	if (tcsetattr(fd, TCSAFLUSH, &dt->dt_tinfo) < 0) {
-		fprintf(stderr, 
-			FLFMT
-			"Can't set input flags (databits %d, stop bits %d, parity %d).\n"
-			"tcsetattr returned \"%s\".\n",
-			FL, pset->databits, pset->stopbits, pset->parflag,
-			strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
-	}
-	
-	if(rv = diag_tty_check_set(fd, &dt->dt_tinfo))
-	    return rv;
-	
-	return 0;
-}
 
 /*
  * Set speed/parity etc
@@ -480,7 +247,7 @@ diag_tty_setup(struct diag_l0_device *dl0d,
 	const struct diag_serial_settings *pset)
 {
 	int iflag;
-	int fd, rv;
+	int fd;
 	struct diag_ttystate	*dt;
 
 	fd = dl0d->fd;
@@ -546,7 +313,6 @@ diag_tty_setup(struct diag_l0_device *dl0d,
 	 */
 	dt->dt_tinfo.c_cflag &= ~CBAUD;
 	dt->dt_tinfo.c_cflag |= B38400;	//see termios.h
-
 #else
 	/* "POSIXY" version of setting non-standard baud rates.
 	 * This works at least for FreeBSD.
@@ -602,9 +368,6 @@ diag_tty_setup(struct diag_l0_device *dl0d,
 			return diag_iseterr(DIAG_ERR_GENERAL);
 		}
 	}
-
-	if(rv = diag_tty_check_set(fd, &dt->dt_tinfo))
-	    return rv;
 
 	/* "stty raw"-like iflag settings: */
 	iflag = dt->dt_tinfo.c_iflag;
@@ -696,9 +459,6 @@ diag_tty_setup(struct diag_l0_device *dl0d,
 			strerror(errno));
 		return diag_iseterr(DIAG_ERR_GENERAL);
 	}
-	
-	if(rv = diag_tty_check_set(fd, &dt->dt_tinfo))
-	    return rv;
 	
 	return 0;
 }
@@ -861,27 +621,39 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 
 	timeout *= 4096/2000;
 
-	fd = open ("/dev/rtc", O_RDONLY);
+	if (fd = open ("/dev/rtc", O_RDONLY) < 0) {
+		fprintf(stderr, FLFMT "open on /dev/rtc returned %s.\n",
+			FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
+	}
+// 	fd = open ("/dev/rtc0", O_RDONLY);
 
 	/* Read periodic IRQ rate */
-	rv = ioctl(fd, RTC_IRQP_READ, &data);
-        if (rv < 0) {
-		fprintf(stderr, 
-			FLFMT "diag_tty_read: RTC_IRQP_READ failed %s\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
+	if (rv = ioctl(fd, RTC_IRQP_READ, &data) < 0) {
+		fprintf(stderr, FLFMT "ioctl RTC_IRQP_READ on /dev/rtc returned %s.\n",
+			FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
 	}
 
 	if (rv != 2048)
-		ioctl(fd, RTC_IRQP_SET, 2048);
+		if(ioctl(fd, RTC_IRQP_SET, 2048) < 0) {
+			fprintf(stderr, FLFMT "ioctl RTC_IRQP_SET on /dev/rtc returned %s.\n",
+				FL, strerror(errno));
+			return (diag_iseterr(DIAG_ERR_GENERAL));
+		}
 
 	/* Enable periodic interrupts */
-	if(ioctl(fd, RTC_PIE_ON, 0) < 0) {
-		fprintf(stderr, 
-			FLFMT "diag_tty_read: RTC_PIE_ON failed %s\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
+ 	if (ioctl(fd, RTC_PIE_ON, 0) < 0) {
+		fprintf(stderr, FLFMT "ioctl RTC_PIE_ON on /dev/rtc returned %s.\n",
+			FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
 	}
 
-	read(fd, &data, sizeof(unsigned long));
+	if (read(fd, &data, sizeof(unsigned long)) < 0) {
+		fprintf(stderr, FLFMT "read (1) on /dev/rtc returned %s.\n",
+			FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
+	}
 	data >>= 8;
 	time+=(int)data;
 
@@ -889,37 +661,44 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 		fd_set set;
 
 		FD_ZERO(&set);
-		FD_SET(dl0d->fd, &set);
+ 		FD_SET(dl0d->fd, &set);
+// 		FD_SET(fd, &set);
 
-		rv = select ( dl0d->fd + 1,  &set, NULL, NULL, &tv ) ;
+// 		printf("errno: %d\n", errno);
+ 		rv = select ( dl0d->fd + 1,  &set, NULL, NULL, &tv ) ;
+//  		rv = select ( fd + 1,  &set, NULL, NULL, &tv ) ;
+// 		printf("rv: %d\n", rv);
+// 		printf("errno: %d or %s\n", errno, strerror(errno));
 
-		if ( rv > 0 ) {
-//		        fprintf(stderr, FLFMT "OK, got stuff %d\n", FL, rv);
-			break;
-		}
+		if ( rv > 0 ) break ;
 
-		if (errno != 0 && errno != EINTR) {
-		        fprintf(stderr, FLFMT "Bad, got error, rv: %d, %s\n", FL, rv, strerror(errno));
-			break;
-		}
+		if (errno != 0 && errno != EINTR) break;
 		errno = 0 ;
 
-		read(fd, &data, sizeof(unsigned long));
+		if (read(fd, &data, sizeof(unsigned long)) < 0) {
+		      fprintf(stderr, FLFMT "read (2) on /dev/rtc returned %s.\n",
+			      FL, strerror(errno));
+		      return (diag_iseterr(DIAG_ERR_GENERAL));
+		}
 		data >>= 8;
 		time+=(int)data;
 		if (time>=timeout) {
-//		        fprintf(stderr, FLFMT "diag_tty_read: timeout\n", FL);
+// 		  printf("timed out with rv == %d and errno: %s\n", rv,  strerror(errno));
 			break;
 		}
 	}
 
 	/* Disable periodic interrupts */
-	if(ioctl(fd, RTC_PIE_OFF, 0) < 0) {
-		fprintf(stderr, 
-			FLFMT "diag_tty_read: RTC_PIE_OFF failed %s\n", FL, strerror(errno));
-		return diag_iseterr(DIAG_ERR_GENERAL);
+ 	if (ioctl(fd, RTC_PIE_OFF, 0) < 0) {
+		fprintf(stderr, FLFMT "ioctl RTC_PIE_OFF on /dev/rtc returned %s.\n",
+			FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
 	}
-	close(fd);
+	if (close(fd) < 0) {
+		fprintf(stderr, FLFMT "close on /dev/rtc returned %s.\n",
+		    FL, strerror(errno));
+		return (diag_iseterr(DIAG_ERR_GENERAL));
+	}
 
 	if (diag_l0_debug & DIAG_DEBUG_IOCTL)
 		if (time>=timeout){
@@ -950,6 +729,8 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 			FL, dl0d->fd, strerror(errno));
 
 		/* Unspecific Error */
+		printf("rv: %d\n", rv);
+		printf("errno: %d\n", errno);
 		return (diag_iseterr(DIAG_ERR_GENERAL));
 	}
 }
@@ -1107,9 +888,7 @@ const void *buf, const size_t count)
   	int ms = 191;
 #endif
 	short   bits, parBit, stpBit, i, high=1, parity;
-	size_t num, rv;
-	int retries;
-
+	size_t num;
 	char message_buff[3];
 
 	if((dl0d->ttystate->dt_tinfo.c_cflag & CS8) == CS8) {
@@ -1150,12 +929,7 @@ const void *buf, const size_t count)
 	}
 
 // start bit
-//        if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
-        retries = 9;
-        rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-	while (rv == -1 && errno == EINTR && (retries--))
-	  rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-        if (rv < 0) {
+	if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
 		fprintf(stderr, 
 			FLFMT "open: Ioctl TIOCSBRK failed %s\n", FL, strerror(errno));
 		return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1169,13 +943,8 @@ const void *buf, const size_t count)
             for(i=0; i< bits; i++) {
 	        if(*((char *) (buf+num)) & (1<<i)) {
 		  parity *= -1;
-//		  fprintf(stderr, "high\n", FL);
 		  if(!high) {
-		      retries = 9;
-		      rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-		      while (rv == -1 && errno == EINTR && (retries--))
-			rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-	              if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCCBRK failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1183,14 +952,8 @@ const void *buf, const size_t count)
 		      high=1;
 		  }
 		} else {
- //                 fprintf(stderr, "low\n", FL);
 		  if(high) {
-//	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
-		    retries = 9;
-		    rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-		    while (rv == -1 && errno == EINTR && (retries--))
-		    rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-		    if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCSBRK failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1207,13 +970,8 @@ const void *buf, const size_t count)
 // parity bit
 	    if(parBit == diag_par_e) {
 	      if (parity < 0) {
-//                fprintf(stderr, "high\n", FL);
 		if(!high) {
-		      retries = 9;
-		      rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-		      while (rv == -1 && errno == EINTR && (retries--))
-			ioctl(dl0d->fd, TIOCCBRK, 0);
-	              if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCCBRK2 failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1221,13 +979,8 @@ const void *buf, const size_t count)
 		      high=1;
 		}
 	      } else {
-//                fprintf(stderr, "low\n", FL);
 		if(high) {
-		      retries = 9;
-		      rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-		      while (rv == -1 && errno == EINTR && (retries--))
-			ioctl(dl0d->fd, TIOCSBRK, 0);
-	              if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCSBRK2 failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1243,13 +996,8 @@ const void *buf, const size_t count)
 	    }
 	    if(parBit == diag_par_o) {
 	      if (parity > 0) {
-//                fprintf(stderr, "high\n", FL);
 		if(!high) {
-		      retries = 9;
-		      rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-		      while (rv == -1 && errno == EINTR && (retries--))
-			ioctl(dl0d->fd, TIOCCBRK, 0);
-	              if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCCBRK3 failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1257,13 +1005,8 @@ const void *buf, const size_t count)
 		      high=1;
 		}
 	      } else {
-//                fprintf(stderr, "low\n", FL);
 		if(high) {
-		      retries = 9;
-		      rv = ioctl(dl0d->fd, TIOCSBRK, 0);
-		      while (rv == -1 && errno == EINTR && (retries--))
-			ioctl(dl0d->fd, TIOCSBRK, 0);
-	              if (rv < 0) {
+	              if (ioctl(dl0d->fd, TIOCSBRK, 0) < 0) {
 		          fprintf(stderr, 
 			      FLFMT "open: Ioctl TIOCSBRK3 failed %s\n", FL, strerror(errno));
 		          return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1278,13 +1021,8 @@ const void *buf, const size_t count)
 	      diag_os_millisleep(ms);
 	    }
 // stop bit(s)
-//           fprintf(stderr, "high\n", FL);
-           if(!high) {
-	         retries = 9;
-	         rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-	         while (rv == -1 && errno == EINTR && (retries--))
-		   rv = ioctl(dl0d->fd, TIOCCBRK, 0);
-	         if (rv < 0) {
+            if(!high) {
+	         if (ioctl(dl0d->fd, TIOCCBRK, 0) < 0) {
 		     fprintf(stderr, 
 			FLFMT "open: Ioctl TIOCCBRK2 failed %s\n", FL, strerror(errno));
 		     return diag_iseterr(DIAG_ERR_GENERAL);
@@ -1311,6 +1049,7 @@ const void *buf, const size_t count)
 
 //different _iflush implementations (POSIX or not)
 #if defined(__linux__) && (TRY_POSIX == 0)
+// #if 0
 /*
  * Original Linux input-flush implementation that uses the select timeout:
  */
