@@ -384,6 +384,7 @@ struct diag_msg *msg)
 	  switch (tmsg->type) {
 
 		case DIAG_VAG_RSP_ASCII:
+		  //printf("DIAG_VAG_RSP_ASCII <%x> type message received\n", tmsg->type);
 		  for(i=0; i< tmsg->len; i++)
 		      printf("%c", tmsg->data[i]);
 		  printf("\n");
@@ -392,6 +393,7 @@ struct diag_msg *msg)
 		  printf("\n");
 		  break;
 		case DIAG_VAG_RSP_DTC_RQST:
+		  //printf("DIAG_VAG_RSP_DTC_RQST <%x> type message received\n", tmsg->type);
 		  for(i=0; i< tmsg->len; i+=3) {
 		    printf("Error code %d, code: <%x>", (i/3 +1), tmsg->data[i]);
 		    printf("<%x>", tmsg->data[i+1]);
@@ -400,6 +402,7 @@ struct diag_msg *msg)
 		  printf("\n");
 		  break;
 		case DIAG_VAG_RSP_DATA_OTHER:
+		  //printf("DIAG_VAG_RSP_DATA_OTHER/GROUP_READ <%x> type message received\n", tmsg->type);
 		  for(i=0; i< tmsg->len; i+=3) {
 		    printf("(Sensor) block %d, block id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		    printf("sensor bytes: <%x>", tmsg->data[i+1]);
@@ -409,6 +412,7 @@ struct diag_msg *msg)
 		  printf("\n");
 		  break;
 		case DIAG_VAG_RSP_CHAN_READ:
+		  //printf("DIAG_VAG_RSP_CHAN_READ/ADAPTATION_READ <%x> type message received\n", tmsg->type);
 		  for(i=0; i< tmsg->len; i+=3) {
 		    printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		    printf("channel bytes: <%x>", tmsg->data[i+1]);
@@ -419,24 +423,54 @@ struct diag_msg *msg)
 		case DIAG_VAG_CMD_ACK:
 		/* not going to print ACKs */
 		  break;
-        case 0xf4:
-          printf("Group zero values: ");
-          printf("%d", tmsg->data[0]);
-		  for(i=1; i< tmsg->len; i++)
-		      printf(", %d", tmsg->data[i]);
+		case DIAG_VAG_RSP_GROUP_HEADER:
+		  //printf("DIAG_VAG_RSP_GROUP_HEADER <%x> type message received\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i+=3) {
+		    printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
+		    printf("channel bytes: <%x>", tmsg->data[i+1]);
+		    printf("<%x>\n", tmsg->data[i+2]);
+		  }
 		  printf("\n");
-          break;
-		case 0x0a:
-		/* seems to just be an empty Group or Channel address ? */
 		  break;
-		default:
-		  fprintf(stderr,
-			FLFMT "message type: <%x> not yet known, add code here please!\n",
-				FL, tmsg->type);
+		case DIAG_VAG_RSP_ROM:
+		  //printf("DIAG_VAG_RSP_ROM <%x> type message received\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i++)
+		      printf("%c", tmsg->data[i]);
+		  printf("\n");
 		  for(i=0; i< tmsg->len; i++)
 		      printf("<%x>", tmsg->data[i]);
 		  printf("\n");
-
+		  break;
+		case DIAG_VAG_RSP_OUTPUT_TEST:
+		  //printf("DIAG_VAG_RSP_OUTPUT_TEST <%x> type message received\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i++)
+		      printf("%c", tmsg->data[i]);
+		  printf("\n");
+		  for(i=0; i< tmsg->len; i++)
+		      printf("<%x>", tmsg->data[i]);
+		  printf("\n");
+		  break;
+		case DIAG_VAG_RSP_BASIC_SETTING:
+		  //printf("DIAG_VAG_RSP_BASIC_SETTING <%x> type message received\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i++)
+		      printf(", %d", tmsg->data[i]);
+		  printf("\n");
+          break;
+		case DIAG_VAG_END_FRAME:
+		/* seems to just be an empty Group or Channel address ? */
+		  //printf("DIAG_VAG_END_FRAME <%x> type message received\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i++)
+		      printf(", %d", tmsg->data[i]);
+		  printf("\n");
+		  break;
+		default:
+		  printf("message type: <%x> not yet known, add code here please!\n", tmsg->type);
+		  for(i=0; i< tmsg->len; i++)
+		      printf("<%x>", tmsg->data[i]);
+		  printf("\n");
+		  //fprintf(stderr,
+		//	FLFMT "message type: <%x> not yet known, add code here please!\n",
+		//		FL, tmsg->type);
 	  }
 	  tmsg = tmsg->next;
 	}

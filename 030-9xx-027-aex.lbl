@@ -1,0 +1,223 @@
+Google + "AEX lbl Einstellbedingungen" -> ;)
+
+; beinhaltet Messwertgruppen
+
+;
+
+; This file is part of a redirection package,
+
+; make sure you have all of the following files.
+
+;
+
+; 03-01.LBL
+
+; 6K-01.LBL
+
+; 030-906-027-AEX.LBL (1.4l E @ 54 HP - AEX)
+
+; 030-9xx-027-AEX.LBL (1.4l E @ 60 HP - AEX/AKV/ANX/APQ)
+
+;
+
+; erstellt von AndreW21de
+
+; ?berarbeitet am 08.02.2005 von Sebastian Stange (sebastian@ross-tech.com)
+
+;
+
+; letzte ?nderung: 08.02.2005
+
+;
+
+; ben?tigt mindestens VAG-COM 405.0 oder h?her
+
+;
+
+;
+
+;---------------------------------------------------
+
+;
+
+; Messwertgruppen Informationen
+
+;
+
+;---------------------------------------------------
+
+;
+
+;
+
+000,0,Anzeigewert dezimal bei Leerlauf
+
+000,1,Ansauglufttemperatur,Sollwert: 75...158 (15...70 °C)
+
+000,2,Batteriespannung,Sollwert: 170...206 (12...14.5 V)
+
+000,3,K?hlmitteltemperatur,Sollwert: 176...229 (80...115 °C)
+
+000,4,Motorlast,Sollwert (Schaltgetriebe sowie ALLE AEX/APQ): 40...68 (2.0...3.4 ms) | Sollwert (autom. Getriebe): 35...64 (1.75...3.2 ms)
+
+000,5,Lambda Signal,Sollwert: 0...205 (0...1.0 V)
+
+000,6,Lambda Integral,Sollwert: 102...154 (128 = Lambda 1)
+
+000,7,Lambda Status,Sollwert: 0...4
+
+000,8,Drosselklappen Winkel,Sollwert: 10...18 (4.5...8.1 °<)
+
+000,9,Einspritzzeit,Sollwert: 8...21 (3.1...8.1 ms)
+
+000,10,Motordrehzahl,Sollwert (Schaltgetriebe): 65...75 [650...750 U/min] | Sollwert (autom. Getriebe): 75...85 [750...850 U/min]
+
+;
+
+001,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+001,2,K?hlmittel-,temperatur,Sollwert: 80...115 °C
+
+001,3,Lambdasonden-,spannung,Sollwert: 0...1.0 V
+
+001,4,Einstell-,bedingungen,Sollwert: 00000000 (siehe Labelfile)
+
+; 1xxxxxxx - Fehler im Fehlerspeicher
+
+; x1xxxxxx - ohne Bedeutung
+
+; xx1xxxxx - ohne Bedeutung
+
+; xxx1xxxx - Leerlaufschalter offen
+
+; xxxx1xxx - Fehler in der Lambdaregelung
+
+; xxxxx1xx - Drosselklappe ge?ffnet
+
+; xxxxxx1x - Drehzahl ?ber 2500/min
+
+; xxxxxxx1 - K?hlmitteltemperatur unter 80°C
+
+;
+
+002,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+002,2,Einspritzzeit,,Sollwert: 3.1...8.1 ms
+
+002,3,Batterie-,spannung,Sollwert: 12.0...14.5 V
+
+002,4,Ansaugluft-,tempeatur,Sollwert: 15...70 °C
+
+;
+
+003,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+003,2,Motorlast,,Sollwert (Schaltgetriebe sowie ALLE AEX/APQ): 2.0...3.4 ms | Sollwert (autom. Getriebe): 1.75...3.2 ms
+
+003,3,Drosselklappen-,winkel,Sollwert: 4.5...8.1 °
+
+003,4,Drosselklappen-,potentiometer
+
+;
+
+004,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+004,2,Motorlast,,Sollwert (Schaltgetriebe sowie ALLE AEX/APQ): 2.0...3.4 ms | Sollwert (autom. Getriebe): 1.75...3.2 ms
+
+004,3,Fahrzeug-,geschwindigkeit
+
+004,4,Betriebszustand,,siehe Labelfile
+
+; 1xxxxxxx - Schubbetrieb
+
+; x1xxxxxx - Leerlauf
+
+; xx1xxxxx - Teillast
+
+; xxx1xxxx - Vollast
+
+; xxxx1xxx - Beschleunigungsanreicherung
+
+; xxxxx1xx - Verz?gerunsgabmagerung
+
+; xxxxxx1x - Klimakompressor eingeschaltet
+
+; xxxxxxx1 - Zylinder 1 erkannt
+
+;
+
+005,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+005,2,Tastverh?ltnis,Magnetventil 1,f?r Aktivkohlebeh?lter
+
+005,3,Adaptionswert,Magnetventil 1,f?r Aktivkohlebeh?lter
+
+005,4,Sp?lrate,Magnetventil 1,f?r Aktivkohlebeh?lter
+
+;
+
+006,1,Gemisch-,korrekturwert
+
+006,2,Lernwert f?r,Gemischkorrektur
+
+006,3,Lernwert f?r,DK offen
+
+006,4,Lernwert f?r,DK geschlossen
+
+;
+
+007,1,Motordrehzahl,,Sollwert (Schaltgetriebe): 650...750 U/min | Sollwert (autom. Getriebe): 750...850 U/min
+
+007,2,K?hlmittel-,temperatur,Sollwert: 80...115 °C
+
+007,3,Lambdasonden-,spannung,Sollwert: 0...1.0 V
+
+007,4,Einstell-,bedingungen,siehe Labelfile
+
+; 1xxxxxxx - Fehler im Fehlerspeicher
+
+; x1xxxxxx - ohne Bedeutung
+
+; xx1xxxxx - ohne Bedeutung
+
+; xxx1xxxx - Leerlaufschalter offen
+
+; xxxx1xxx - Fehler in der Lambdaregelung
+
+; xxxxx1xx - Drosselklappe ge?ffnet
+
+; xxxxxx1x - Drehzahl ?ber 2500/min
+
+; xxxxxxx1 - K?hlmitteltemperatur unter 80°C
+
+;
+
+008,0,Drosselklappensteller/-potentiometer
+
+008,1,Drosselklappen-,steller (IST)
+
+008,2,Notlaufquerschnitt,Drosselklappe
+
+008,3,MIN.-Anschlag,DK-Steller
+
+008,4,MAX.-Anschlag,DK-Steller
+
+;
+
+009,1,Lambda,Integrator
+
+009,2,Lambda,Adaptionswert
+
+009,3,Lambda,Adaptionswert
+
+009,4,Lambda,Adaptionswert
+
+;
+
+098,0,Drosselklappenadaption (Grundeinstellung)
+
+098,3,Betriebszustand
+
+098,4,Status
+
+;
