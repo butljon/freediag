@@ -452,14 +452,16 @@ struct diag_msg *msg)
 		  break;
 		case DIAG_VAG_RSP_BASIC_SETTING:
 		  //printf("DIAG_VAG_RSP_BASIC_SETTING <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
+		  printf("%d", tmsg->data[0]);
+		  for(i=1; i< tmsg->len; i++)
 		      printf(", %d", tmsg->data[i]);
 		  printf("\n");
           break;
 		case DIAG_VAG_END_FRAME:
 		/* seems to just be an empty Group or Channel address ? */
 		  //printf("DIAG_VAG_END_FRAME <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
+		  printf("%d", tmsg->data[0]);
+		  for(i=1; i< tmsg->len; i++)
 		      printf(", %d", tmsg->data[i]);
 		  printf("\n");
 		  break;
@@ -468,9 +470,8 @@ struct diag_msg *msg)
 		  for(i=0; i< tmsg->len; i++)
 		      printf("<%x>", tmsg->data[i]);
 		  printf("\n");
-		  //fprintf(stderr,
-		//	FLFMT "message type: <%x> not yet known, add code here please!\n",
-		//		FL, tmsg->type);
+		  fprintf(stderr, FLFMT "message type: <%x> not yet known, add code here please!\n",
+				FL, tmsg->type);
 	  }
 	  tmsg = tmsg->next;
 	}
