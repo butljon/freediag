@@ -51,6 +51,7 @@ static int cmd_vag_request(int argc, char **argv);
 static int cmd_vag_reqdtc(int argc, char **argv);
 static int cmd_vag_cleardtc(int argc, char **argv);
 static int cmd_vag_groupread(int argc, char **argv);
+static int cmd_vag_readaexgrps(int argc, char **argv);
 static int cmd_vag_channelread(int argc, char **argv);
 static int cmd_vag_sriread(int argc, char **argv);
 static int cmd_vag_monitor(int argc, char **argv);
@@ -71,6 +72,8 @@ const struct cmd_tbl_entry vag_cmd_table[] =
 	{ "cleardtc", "cleardtc", "Clear DTCs", cmd_vag_cleardtc,
 		0, NULL},
 	{ "groupread", "groupread (<grpId> <grpId> ...)", "Read sensor group data", cmd_vag_groupread,
+		0, NULL},
+	{ "readaexgrps", "readaexgrps", "Read all active AEX groups", cmd_vag_readaexgrps,
 		0, NULL},
 	{ "channelread", "channelread (<chanId> <chanId> ...", "Read an adaptation channel", cmd_vag_channelread,
 		0, NULL},
@@ -500,8 +503,42 @@ char **argv __attribute__((unused)))
             }
         }
 	}
-	
 
+	return CMD_OK;
+}
+
+#ifdef WIN32
+int
+cmd_vag_readaexgrps(int argc,
+char **argv)
+#else
+int
+cmd_vag_readaexgrps(int argc __attribute__((unused)),
+char **argv __attribute__((unused)))
+#endif
+{
+	int i;
+	char buff[4], *buff2[3];
+	  	// AEX: group 7 same as group 1
+	int aex_motor_groups[11] = {0, 1, 2, 3, 4, 5, 6, 8, 9, 97, 98};
+	
+	snprintf(buff, 4, "%d", DIAG_VAG_CMD_DATA_OTHER);
+	buff2[1] = malloc(4);
+	memcpy(buff2[1], &buff[0], 4);
+
+	for(i=0; i<11; i++) {
+		snprintf(buff, 4, "%d", aex_motor_groups[i]);
+		buff2[2] = malloc(4);
+	    memcpy(buff2[2], &buff[0], 4);
+
+	    printf("Group read, group %d\n", aex_motor_groups[i]);
+	    if(CMD_OK != cmd_vag_request(3, buff2)) {
+		    fprintf(stderr, FLFMT "Failed read group %d\n", FL, aex_motor_groups[i]);
+		    return CMD_FAILED;	      
+	    }
+		diag_os_millisleep(25);
+	}
+  	
 	return CMD_OK;
 }
 
