@@ -244,11 +244,10 @@ diag_l1_send(struct diag_l0_device *dl0d, const char *subinterface, const void *
 /*
  * Get data (blocking, unless timeout is 0)
  */
-int
-diag_l1_recv(struct diag_l0_device *dl0d,
-	const char *subinterface, void *data, size_t len, int timeout)
-{
+int diag_l1_recv(struct diag_l0_device *dl0d, const char *subinterface, void *data, size_t len, int timeout) {
+
 	return diag_l0_device_dl0(dl0d)->diag_l0_recv(dl0d, subinterface, data, len, timeout);
+
 }
 
 /*

@@ -29,9 +29,10 @@
  * !!! INCOMPLETE !!!!
  *
  */
-
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
 
 #include "diag.h"
 #include "diag_err.h"
@@ -43,8 +44,6 @@
 #include "diag_l2_iso9141.h"
 
 #include "diag_l2_kw1281.h" /* prototypes for this file */
-
-CVSID("$Id: diag_l2_kw1281.c,v 1.3 2004/07/03 02:04:18 vnevoa Exp $");
 
 /*
  * ISO KW1281 specific data
@@ -73,11 +72,8 @@ struct diag_l2_kw1281
 #define STATE_CONNECTING  1	/* Connecting */
 #define STATE_ESTABLISHED 2	/* Established */
 
-
-static int
-diag_l2_proto_kw1281_recv(struct diag_l2_conn *d_l2_conn, int timeout,
-	void (*callback)(void *handle, struct diag_msg *msg),
-	void *handle);
+static int diag_l2_proto_kw1281_recv(struct diag_l2_conn *d_l2_conn, int timeout,
+		void (*callback)(void *handle, struct diag_msg *msg), void *handle);
 
 static int
 diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg);
@@ -90,15 +86,11 @@ diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg);
 /*
  * Decode the message header
  */
-static int
-diag_l2_proto_kw1281_decode(char *data, int len,
-		 int *hdrlen, int *datalen, int *source, int *dest,
-		int first_frame)
-{
+static int diag_l2_proto_kw1281_decode(char *data, int len, int *hdrlen, int *datalen, int *source, int *dest,
+		int first_frame) {
 	int dl;
 
-	if (diag_l2_debug & DIAG_DEBUG_PROTO)
-	{
+	if (diag_l2_debug & DIAG_DEBUG_PROTO) 	{
 		int i;
 		fprintf(stderr, FLFMT "decode len %d", FL, len);
 		for (i = 0; i < len ; i++)
@@ -183,7 +175,7 @@ diag_l2_proto_kw1281_decode(char *data, int len,
 	/*
 	 * If len is silly [i.e 0] we've got this mid stream
 	 */
-	if (*datalen == 0)
+	if(*datalen == 0)
 		return(diag_iseterr(DIAG_ERR_BADDATA));
 
 	/*
@@ -191,7 +183,7 @@ diag_l2_proto_kw1281_decode(char *data, int len,
 	 * If not, return saying data is incomplete so far
 	 */
 
-	if (len < (*hdrlen + *datalen + 1))
+	if(len < (*hdrlen + *datalen + 1))
 		return(diag_iseterr(DIAG_ERR_INCDATA));
 
 	return(0);
@@ -199,179 +191,168 @@ diag_l2_proto_kw1281_decode(char *data, int len,
 #endif
 
 
-struct monitor_type *
-push_monitor(struct monitor_type *node, uint8_t monitor) {
+struct monitor_type *push_monitor(struct monitor_type *node, uint8_t monitor) {
    
-  struct monitor_type *ptr;
+    struct monitor_type *ptr;
   
-  if(node == NULL) {
-    node = (struct monitor_type *) malloc(sizeof(struct monitor_type));
-    node->value = monitor;
-    node->next = NULL;
-    return node;
-  }
+    if(node == NULL) {
+        node = (struct monitor_type *) malloc(sizeof(struct monitor_type));
+        node->value = monitor;
+        node->next = NULL;
+        return node;
+    }
     
-  ptr = node;
-  while(ptr) {
-    if(ptr->value == monitor) {
-      printf("Group %d already on monitor watch list\n", monitor);
-      return node;
+    ptr = node;
+    while(ptr) {
+        if(ptr->value == monitor) {
+            printf("Group %d already on monitor watch list\n", monitor);
+            return node;
+        }
+        if(ptr->next == NULL) {
+            ptr->next = (struct monitor_type *) malloc(sizeof(struct monitor_type));
+            ptr = ptr->next;
+            ptr->value = monitor;
+            ptr->next = NULL;
+            return node;
+        }
+        ptr = ptr->next;
     }
-    if(ptr->next == NULL) {
-      ptr->next = (struct monitor_type *) malloc(sizeof(struct monitor_type));
-      ptr = ptr->next;
-      ptr->value = monitor;
-      ptr->next = NULL;
-      return node;
-    }
-    ptr = ptr->next;
-  }
 
   /* should never get here, hence: error */
-  fprintf(stderr, FLFMT "Something strange: no able to push monitor %d\n",
-				FL, monitor);
-  return node;
-}
-
-
-struct monitor_type *
-pop_monitor(struct monitor_type *node, uint8_t monitor) {
-  
-  struct monitor_type *ptr, *found;
-
-  if(node == NULL) {
-    printf("Monitor list empty, group %d cannot be removed\n", monitor);
+    fprintf(stderr, FLFMT "Something strange: no able to push monitor %d\n", FL, monitor);
     return node;
-  }
-
-  if(node->value == monitor) {
-    ptr=node->next;
-    free(node);
-    return ptr;
-  }
-
-  ptr=node;
-  while(ptr->next) {
-    if(ptr->next->value == monitor) {
-      found = ptr->next;
-      ptr->next = found->next;
-      free(found);
-      return node;
-    }
-    ptr = ptr->next;
-  }
-  printf("Group %d not on monitor watch list\n", monitor);
-  return node;
 
 }
 
-void
-show_monitor(struct monitor_type *node) {
+struct monitor_type *pop_monitor(struct monitor_type *node, uint8_t monitor) {
   
-  struct monitor_type *ptr;
+    struct monitor_type *ptr, *found;
 
-  if(node == NULL) {
-    printf("Monitor watch list empty\n");
-    return;
-  }
+    if(node == NULL) {
+        printf("Monitor list empty, group %d cannot be removed\n", monitor);
+        return node;
+    }
 
-  ptr=node;
-  while(ptr) {
-    printf("Group %d on monitor watch list\n", ptr->value);
-    ptr = ptr->next;
-  }
+    if(node->value == monitor) {
+        ptr=node->next;
+        free(node);
+        return ptr;
+    }
 
-  return;
+    ptr=node;
+    while(ptr->next) {
+        if(ptr->next->value == monitor) {
+            found = ptr->next;
+            ptr->next = found->next;
+            free(found);
+            return node;
+        }
+        ptr = ptr->next;
+    }
+    printf("Group %d not on monitor watch list\n", monitor);
+    return node;
+
 }
 
+void show_monitor(struct monitor_type *node) {
+  
+    struct monitor_type *ptr;
 
-void decode_value(struct diag_msg *tmsg, int i)
-{
-  int j;
-  uint8_t displayBit, value;
-  double temp =0;
+    if(node == NULL) {
+        printf("Monitor watch list empty\n");
+        return;
+    }
+
+    ptr=node;
+    while(ptr) {
+        printf("Group %d on monitor watch list\n", ptr->value);
+        ptr = ptr->next;
+    }
+
+    return;
+
+}
+
+void decode_value(struct diag_msg *tmsg, int i) {
+
+    int j;
+    uint8_t displayBit, value;
+    double temp =0;
   /* decoding according to http://www.blafusel.de/obd/obd2_kw1281.html */
-  switch(tmsg->data[i]) {
-    case 0x01:
-      printf("%f rpm\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.2));
-      break;
-    case 0x02:
-      printf("Absoulte (throttle) position: %f \%\n",((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
-      break;
-    case 0x03:
-      printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
-      break;
-    case 0x04:
-      printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
-      break;
-    case 0x05:
-      printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
-      break;
-    case 0x06:
-    case 0x15:
-    case 0x16:
-      printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
-      break;
-    case 0x07:
-      printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
-      break;
-    case 0x08:
-      printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
-      break;
-    case 0x09:
-      printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
-      break;    
-    case 0x0a:
-      printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
-      break;
-    case 0x0B:
-      printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
-      break;  
-    case 0x0c:
-      printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
-      break;  
-    case 0x0d:
-      printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
-      break;  
-    case 0x0e:
-      printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
-      break;
-    case 0x0F:
-      printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
-      break;
-    case 0x10:
-      printf("8 bit block: <");
-      value = tmsg->data[i+2];
-      for (j=0; j<8; j++) {
-	printf("%d", displayBit = (value & 0x80) ? 1 : 0);
-	value = value << 1;
-      }
-      printf(">\n");
-      break;
-    case 0x17:
-      printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
-      break;
-    case 0x21:
-      printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
-      break;
-    default:
-      printf("Don't know that unit, please add here!\n");
-      break;
-  }
-  return;
+    switch(tmsg->data[i]) {
+        case 0x01:
+            printf("%f rpm\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.2));
+            break;
+        case 0x02:
+            printf("Absoulte (throttle) position: %f \%\n",((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+            break;
+        case 0x03:
+            printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+            break;
+        case 0x04:
+            printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
+            break;
+        case 0x05:
+            printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
+            break;
+        case 0x06:
+        case 0x15:
+        case 0x16:
+            printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
+            break;
+        case 0x07:
+            printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+            break;
+        case 0x08:
+            printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
+            break;
+        case 0x09:
+            printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
+            break;
+        case 0x0a:
+            printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
+            break;
+        case 0x0B:
+            printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
+            break;
+        case 0x0c:
+            printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
+            break;
+        case 0x0d:
+            printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
+            break;
+        case 0x0e:
+            printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
+            break;
+        case 0x0F:
+            printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+            break;
+        case 0x10:
+            printf("8 bit block: <");
+            value = tmsg->data[i+2];
+            for(j=0; j<8; j++) {
+	            printf("%d", displayBit = (value & 0x80) ? 1 : 0);
+	            value = value << 1;
+            }
+            printf(">\n");
+            break;
+        case 0x17:
+            printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
+            break;
+        case 0x21:
+            printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
+            break;
+        default:
+            printf("Don't know that unit, please add here!\n");
+            break;
+    }
+    return;
+
 }
 
 /* basic VAG KW1281 callback routine */
-#ifdef WIN32
-void
-l2_kw1281_data_rcv(void *handle,
-struct diag_msg *msg)
-#else
-void
-l2_kw1281_data_rcv(void *handle __attribute__((unused)),
-struct diag_msg *msg)
-#endif
-{
+void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *msg) {
+
 	/*
 	 * Layer 2 call back, just print the data, this is used if we
 	 * do a "read" and we haven't yet added a L3 protocol
@@ -381,151 +362,136 @@ struct diag_msg *msg)
 
 	tmsg = msg;
 	while(tmsg) {
-	  switch (tmsg->type) {
-
-		case DIAG_VAG_RSP_ASCII:
+	    switch (tmsg->type) {
+		    case DIAG_VAG_RSP_ASCII:
 		  //printf("DIAG_VAG_RSP_ASCII <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
-		      printf("%c", tmsg->data[i]);
-		  printf("\n");
-		  for(i=0; i< tmsg->len; i++)
-		      printf("<%x>", tmsg->data[i]);
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_DTC_RQST:
+		        for(i=0; i<tmsg->len; i++)
+		            printf("%c", tmsg->data[i]);
+		        printf("\n");
+		        for(i=0; i<tmsg->len; i++)
+		            printf("<%x>", tmsg->data[i]);
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_DTC_RQST:
 		  //printf("DIAG_VAG_RSP_DTC_RQST <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i+=3) {
-		    printf("Error code %d, code: <%x>", (i/3 +1), tmsg->data[i]);
-		    printf("<%x>", tmsg->data[i+1]);
-		    printf(" status: <%x>\n", tmsg->data[i+2]);
-		  }
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_DATA_OTHER:
+		        for(i=0; i<tmsg->len; i+=3) {
+		            printf("Error code %d, code: <%x>", (i/3 +1), tmsg->data[i]);
+		            printf("<%x>", tmsg->data[i+1]);
+		            printf(" status: <%x>\n", tmsg->data[i+2]);
+		        }
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_DATA_OTHER:
 		  //printf("DIAG_VAG_RSP_DATA_OTHER/GROUP_READ <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i+=3) {
-		    printf("(Sensor) block %d, block id: <%x>, ", (i/3 +1), tmsg->data[i]);
-		    printf("sensor bytes: <%x>", tmsg->data[i+1]);
-		    printf("<%x>\n", tmsg->data[i+2]);
-		    decode_value(tmsg, i);
-		  }
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_CHAN_READ:
+		        for(i=0; i<tmsg->len; i+=3) {
+		            printf("(Sensor) block %d, block id: <%x>, ", (i/3 +1), tmsg->data[i]);
+		            printf("sensor bytes: <%x>", tmsg->data[i+1]);
+		            printf("<%x>\n", tmsg->data[i+2]);
+		            decode_value(tmsg, i);
+		        }
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_CHAN_READ:
 		  //printf("DIAG_VAG_RSP_CHAN_READ/ADAPTATION_READ <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i+=3) {
-		    printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
-		    printf("channel bytes: <%x>", tmsg->data[i+1]);
-		    printf("<%x>\n", tmsg->data[i+2]);
-		  }
-		  printf("\n");
-		  break;
-		case DIAG_VAG_CMD_ACK:
+		        for(i=0; i<tmsg->len; i+=3) {
+		            printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
+		            printf("channel bytes: <%x>", tmsg->data[i+1]);
+		            printf("<%x>\n", tmsg->data[i+2]);
+		        }
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_CMD_ACK:
 		/* not going to print ACKs */
-		  break;
-		case DIAG_VAG_RSP_GROUP_HEADER:
+		        break;
+		    case DIAG_VAG_RSP_GROUP_HEADER:
 		  //printf("DIAG_VAG_RSP_GROUP_HEADER <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i+=3) {
-		    printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
-		    printf("channel bytes: <%x>", tmsg->data[i+1]);
-		    printf("<%x>\n", tmsg->data[i+2]);
-		  }
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_ROM:
+		        for(i=0; i<tmsg->len; i+=3) {
+		            printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
+		            printf("channel bytes: <%x>", tmsg->data[i+1]);
+		            printf("<%x>\n", tmsg->data[i+2]);
+		        }
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_ROM:
 		  //printf("DIAG_VAG_RSP_ROM <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
-		      printf("%c", tmsg->data[i]);
-		  printf("\n");
-		  for(i=0; i< tmsg->len; i++)
-		      printf("<%x>", tmsg->data[i]);
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_OUTPUT_TEST:
+		        for(i=0; i<tmsg->len; i++)
+		            printf("%c", tmsg->data[i]);
+		        printf("\n");
+		        for(i=0; i<tmsg->len; i++)
+		            printf("<%x>", tmsg->data[i]);
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_OUTPUT_TEST:
 		  //printf("DIAG_VAG_RSP_OUTPUT_TEST <%x> type message received\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
-		      printf("%c", tmsg->data[i]);
-		  printf("\n");
-		  for(i=0; i< tmsg->len; i++)
-		      printf("<%x>", tmsg->data[i]);
-		  printf("\n");
-		  break;
-		case DIAG_VAG_RSP_BASIC_SETTING:
+		        for(i=0; i<tmsg->len; i++)
+		            printf("%c", tmsg->data[i]);
+		        printf("\n");
+		        for(i=0; i<tmsg->len; i++)
+		            printf("<%x>", tmsg->data[i]);
+		        printf("\n");
+		        break;
+		    case DIAG_VAG_RSP_BASIC_SETTING:
 		  //printf("DIAG_VAG_RSP_BASIC_SETTING <%x> type message received\n", tmsg->type);
-		  printf("%d", tmsg->data[0]);
-		  for(i=1; i< tmsg->len; i++)
-		      printf(", %d", tmsg->data[i]);
-		  printf("\n");
-          break;
-		case DIAG_VAG_END_FRAME:
+		        printf("%d", tmsg->data[0]);
+		        for(i=1; i<tmsg->len; i++)
+		            printf(", %d", tmsg->data[i]);
+		        printf("\n");
+                break;
+		    case DIAG_VAG_END_FRAME:
 		/* seems to just be an empty Group or Channel address ? */
 		  //printf("DIAG_VAG_END_FRAME <%x> type message received\n", tmsg->type);
-		  printf("%d", tmsg->data[0]);
-		  for(i=1; i< tmsg->len; i++)
-		      printf(", %d", tmsg->data[i]);
-		  printf("\n");
-		  break;
-		default:
-		  printf("message type: <%x> not yet known, add code here please!\n", tmsg->type);
-		  for(i=0; i< tmsg->len; i++)
-		      printf("<%x>", tmsg->data[i]);
-		  printf("\n");
-		  fprintf(stderr, FLFMT "message type: <%x> not yet known, add code here please!\n",
-				FL, tmsg->type);
-	  }
-	  tmsg = tmsg->next;
+		        printf("%d", tmsg->data[0]);
+		        for(i=1; i<tmsg->len; i++)
+		            printf(", %d", tmsg->data[i]);
+		        printf("\n");
+		        break;
+		    default:
+		        printf("message type: <%x> not yet known, add code here please!\n", tmsg->type);
+		        for(i=0; i<tmsg->len; i++)
+		            printf("<%x>", tmsg->data[i]);
+		        printf("\n");
+		        fprintf(stderr, FLFMT "message type: <%x> not yet known, add code here please!\n", FL, tmsg->type);
+	    }
+	    tmsg = tmsg->next;
 	}
+	return;
 
-	return;	
 }
 
-/* receives a byte and if end = 1 echos back the compliment */
-static int
-diag_l2_proto_kw1281_recv_byte(struct diag_l2_conn *d_l2_conn, int timeout,
-			                        databyte_type *databyte, int end)
-{
-        int rv;
+static int diag_l2_proto_kw1281_recv_byte(struct diag_l2_conn *d_l2_conn, int timeout, databyte_type *databyte, int end) {
+
+    int rv;
 	uint8_t db;
 
 	diag_os_millisleep(5);
 
      /* receive 1 byte */
-        rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		databyte, 1, timeout);
-	if (rv < 0) {
-		fprintf(stderr,
-			FLFMT "failed to receive a byte\n", FL);
+    rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, databyte, 1, timeout);
+	if(rv<0) {
+		fprintf(stderr, FLFMT "failed to receive a byte\n", FL);
 		return rv;
 	}
+	//xxx
+	//fprintf(stderr, FLFMT "received byte %x\n", FL, *databyte);
 	
-	if(end) {
-	  diag_os_millisleep(5);
+	if(!end) {
+	    diag_os_millisleep(5);
 
-	  db = *databyte;
-	  db = ~db;
+	    db = *databyte;
+	    db = ~db;
 
-	  rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		&db, 1, d_l2_conn->diag_l2_p4min);
-	  if (rv < 0) {
-		fprintf(stderr,
-			FLFMT "failed to send back byte %x, i.e. the compliment of %x\n", FL, db, *databyte);
-		return rv;
-	  }
+	    rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, d_l2_conn->diag_l2_p4min);
+	    if (rv < 0) {
+		    fprintf(stderr,  FLFMT "failed to send back byte %x, i.e. the compliment of %x\n", FL, db, *databyte);
+		    return rv;
+	    }
 	}
+
 	return 0;
 }
 
+static int diag_l2_proto_kw1281_recv_msg(struct diag_l2_conn *d_l2_conn, int timeout __attribute__((unused))) {
 
-#ifdef WIN32
-static int
-diag_l2_proto_kw1281_recv_msg(struct diag_l2_conn *d_l2_conn, 
-int timeout)
-#else
-static int
-diag_l2_proto_kw1281_recv_msg(struct diag_l2_conn *d_l2_conn, 
-int timeout __attribute__((unused)))
-#endif
-{
 	struct diag_l2_kw1281 *dp;
 	int rv = 0, i;
 	uint8_t block_len, databyte;
@@ -536,63 +502,60 @@ int timeout __attribute__((unused)))
 	/*
 	 * And receive the new message
 	 */
-        rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 1);
+    rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 0);
 	if (rv < 0) {
- 	    fprintf(stderr,
-		FLFMT "Could not receive the length byte\n", FL);
-	     return rv;
+ 	    fprintf(stderr, FLFMT "Could not receive length byte\n", FL);
+	    return rv;
    	}
 
       /* note msg->len is uint8_t, hence message length restriction of 256 bytes */
 	block_len = databyte-3;
 
-	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 1);
+	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 0);
 	if (rv < 0) {
  	    fprintf(stderr,
-		FLFMT "Could not receive the sequence byte\n", FL);
+		FLFMT "Could not receive sequence byte\n", FL);
 	     return rv;
    	}
 
 	if (databyte != ++dp->seq_nr) {
      /* wrong message number */
-	    fprintf(stderr,
-		FLFMT "Sequence numbers out of sync\n", FL);
-	     return -1;
+	    fprintf(stderr, FLFMT "Sequence numbers out of sync: databyte %x, seq_nr %x\n", FL, databyte, dp->seq_nr-1);
+	    return -1;
    	}     
         
      /* now store message */
 	tmsg = diag_allocmsg((size_t)block_len);
 	tmsg->len = block_len;
 
- 	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &tmsg->type, 1);
+ 	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &tmsg->type, 0);
 	if (rv < 0) {
  	    fprintf(stderr,
 		FLFMT "Could not receive the type byte\n", FL);
-	     return rv;
+	    return rv;
    	}
 
 	if(tmsg->len) {
-	  for (i=0; i < tmsg->len; i++) {
-	      rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &dp->rxbuf[i], 1);
-	      if (rv < 0) {
-		fprintf(stderr,
-		  FLFMT "Could not receive %d th data byte\n", FL, i);
-		return rv;
-	      }
-	  }
+	    for (i=0; i < tmsg->len; i++) {
+	        rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &dp->rxbuf[i], 0);
+	        if (rv < 0) {
+		        fprintf(stderr, FLFMT "Could not receive %d th data byte\n", FL, i);
+		        return rv;
+	        }
+	    }
 	}
 
- 	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 0);
+ 	rv = diag_l2_proto_kw1281_recv_byte(d_l2_conn, timeout, &databyte, 1);
 	if (rv < 0) {
  	    fprintf(stderr,
 		FLFMT "Could not receive end of frame byte\n", FL);
-	     return rv;
+	    return rv;
    	}
 
 	if(databyte != DIAG_VAG_END_FRAME) {
  	    fprintf(stderr,
 		FLFMT "Should have been end of frame byte, instead we got: %x\n", FL, databyte);
-	     return -1;
+	    return -1;
    	}
 
       /* store data */
@@ -613,16 +576,8 @@ int timeout __attribute__((unused)))
  * do call back, receives messages until an ACK appears.  Builds all messages
  * including ACKs onto the list.
  */
-#ifdef WIN32
-static int
-diag_l2_proto_kw1281_int_recv(struct diag_l2_conn *d_l2_conn, 
-int timeout)
-#else
-static int
-diag_l2_proto_kw1281_int_recv(struct diag_l2_conn *d_l2_conn, 
-int timeout __attribute__((unused)))
-#endif
-{
+static int diag_l2_proto_kw1281_int_recv(struct diag_l2_conn *d_l2_conn, int timeout __attribute__((unused))) {
+
 	struct diag_l2_kw1281 *dp;
 	int rv = 0, i, bytes=0;
 	uint8_t block_len, databyte;
@@ -631,9 +586,7 @@ int timeout __attribute__((unused)))
 	dp = (struct diag_l2_kw1281 *)d_l2_conn->diag_l2_proto_data;
 
 	if (diag_l2_debug & DIAG_DEBUG_READ)
-		fprintf(stderr,
-			FLFMT "diag_l2_kw1281_int_recv offset %x\n",
-				FL, dp->rxoffset);
+		fprintf(stderr, FLFMT "diag_l2_kw1281_int_recv offset %x\n", FL, dp->rxoffset);
 
 	/* Clear out last received message if not done already  */
 	if (d_l2_conn->diag_msg)
@@ -647,9 +600,8 @@ int timeout __attribute__((unused)))
 	 */
 	rv = diag_l2_proto_kw1281_recv_msg(d_l2_conn, timeout);
 	if (rv < 0) {
- 	    fprintf(stderr,
-		FLFMT "Could not receive message\n", FL);
-	     return rv;
+        fprintf(stderr, FLFMT "Could not receive message\n", FL);
+	    return rv;
    	}
 	bytes +=rv;
 
@@ -660,19 +612,17 @@ int timeout __attribute__((unused)))
 	while(tmsg->type != DIAG_VAG_CMD_ACK) {
 
  	    if (diag_calloc(&msg.data, 1)) {
- 	      fprintf(stderr,
- 		 	FLFMT "diag_calloc failed for KW1281\n", FL);
- 	      return(DIAG_ERR_NOMEM);
+ 	        fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
+ 	        return DIAG_ERR_NOMEM;
  	    }
  	    msg.len = 1;
  	    databyte = (0xff & (uint8_t) DIAG_VAG_CMD_ACK);
-    	    memcpy(msg.data, &databyte, sizeof(uint8_t));
+    	memcpy(msg.data, &databyte, sizeof(uint8_t));
 
 	    rv = diag_l2_send(d_l2_conn, &msg);
 	    if(rv < 0) {
-	    	fprintf(stderr,
-			FLFMT "Could not send an ACK block properly\n", FL);
-	   	return rv;
+	    	fprintf(stderr, FLFMT "Could not send an ACK block properly\n", FL);
+	   	    return rv;
 	    }
   	    free(msg.data);
 
@@ -681,9 +631,8 @@ int timeout __attribute__((unused)))
 	    */
 	    rv = diag_l2_proto_kw1281_recv_msg(d_l2_conn, timeout);
 	    if (rv < 0) {
-	      fprintf(stderr,
-		  FLFMT "Could not receive further messages\n", FL);
-	      return rv;
+	        fprintf(stderr, FLFMT "Could not receive further messages\n", FL);
+	        return rv;
 	    }
 	    bytes += rv;
  	    tmsg = tmsg->next;
@@ -699,21 +648,19 @@ int timeout __attribute__((unused)))
 /*
  * Send a byte, and ensure we get the inverted ack back
  */
-static int
-diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databyte_type databyte, int end)
-{
+static int diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databyte_type databyte, int end) {
 	uint8_t db = (uint8_t)databyte;
 	int rv = 0;
 
   	diag_os_millisleep(5);
 
 	/* Send the data byte */
-	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		&db, 1, d_l2_conn->diag_l2_p4min);
+	//xxx
+	//fprintf(stderr, FLFMT "sending byte %x\n", FL, db);
+	rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, d_l2_conn->diag_l2_p4min);
 	if (rv < 0) {
-	  fprintf(stderr,
-		FLFMT "Failed to send byte %x\n", FL, db);
-	  return rv;
+	    fprintf(stderr, FLFMT "Failed to send byte %x\n", FL, db);
+	    return rv;
 	}
 
 	diag_l2_sendstamp(d_l2_conn); /* update the last sent timer */
@@ -721,23 +668,21 @@ diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databyte_type dat
 	/* Receive the ack ... but only if it is not the end byte! */	
  
 	/* receive 1 byte */
-        if(end)
+    if(end)
 	{
 // 		diag_os_millisleep(W4min);
 	    diag_os_millisleep(5);
 
-	    rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		&db, 1, KW_1281_TIM_MIN_P3);
+	    rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, KW_1281_TIM_MIN_P3);
 	    if (rv < 0) {
 	      fprintf(stderr,
-		FLFMT "Failed to receive back the compliment of %x (i.e. %x)\n", FL, databyte, (~databyte & 0xff));
+		      FLFMT "Failed to receive back the compliment of %x (i.e. %x)\n", FL, databyte, (~databyte & 0xff));
 	      return rv;
 	    }
 	
 	    if (db != ((~databyte) & 0xff) ) {
-	      fprintf(stderr,
-		FLFMT "Received byte: %x is not compliment of sent byte: %x\n", FL, db, databyte);
-	      return -1;
+	        fprintf(stderr, FLFMT "Received byte: %x is not compliment of sent byte: %x\n", FL, db, databyte);
+	        return -1;
 	    }
 	}
 	return rv;
@@ -793,7 +738,7 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 	d_l2_conn->diag_l2_p3max = KW_1281_TIM_MAX_P3;
 
 	/*
-	 * The ISO_14230_TIM_MIN_P3 (=55) value for diag_l2_p3max appeared to short for
+	 * The ISO_14230_TIM_MIN_P3 (=55) value for diag_l2_p3max appeared too short for
 	 * my (presumably slow!) KW1281 door lock 0x46 ECU, so increase this to 100.
 	 * This seemed to have no side effects on interaction with any other ECUs.
 	 */
@@ -868,13 +813,11 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 		 */
 		cbuf[0] = ~ cbuf[1];
  
-		rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-			&cbuf, 1, d_l2_conn->diag_l2_p4min);
+		rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf, 1, d_l2_conn->diag_l2_p4min);
 
 		if (rv < 0) {
-	  	   fprintf(stderr,
-		 	FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
-	  	   return rv;
+	  	    fprintf(stderr, FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
+	  	    return rv;
 		}
 	}
 
@@ -943,46 +886,41 @@ diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 	int i, rv = 0;
 	uint8_t databyte, cbuf[256];
 
-	if (diag_l2_debug & DIAG_DEBUG_WRITE)
-		fprintf(stderr,
-			FLFMT "diag_l2_kw1281_send %p msg %p len %d called\n",
-				FL, d_l2_conn, msg, msg->len);
+	if(diag_l2_debug & DIAG_DEBUG_WRITE)
+		fprintf(stderr, FLFMT "diag_l2_kw1281_send %p msg %p len %d called\n", FL, d_l2_conn, msg, msg->len);
 
 	dp = (struct diag_l2_kw1281 *)d_l2_conn->diag_l2_proto_data;
 
 	/* Send the length field, which is len + seq + data */
 	databyte = msg->len + 2;
 
-	if ( (rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, databyte, 1)) < 0) {
-		fprintf(stderr, FLFMT "failed to send length %d\n", FL,
-			databyte);
+	if((rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, databyte, 1)) < 0) {
+		fprintf(stderr, FLFMT "failed to send length %d\n", FL, databyte);
 		return rv;
 	}
 	
 	/* Now send the sequence nr */
-	if ( (rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, ++dp->seq_nr, 1)) < 0) {
-		fprintf(stderr, FLFMT "failed to send seq_nr %d\n", FL,
-			dp->seq_nr-1);
-		return rv;
+	if((rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, ++dp->seq_nr, 1)) < 0) {
+	    fprintf(stderr, FLFMT "failed to send seq_nr %d\n", FL, dp->seq_nr-1);
+	    return rv;
 	}
 
 	/* Now send the data */
 	memcpy(&cbuf[0], msg->data, msg->len);
+//	printf("sending %d\n", cbuf);
 
-	for (i=0; i < msg->len; i++)
+	for(i=0; i<msg->len; i++)
 	{
-	  if ( (rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, cbuf[i], 1)) < 0) {
-		fprintf(stderr, FLFMT "failed to send %dth byte %d\n", FL,
-			i, cbuf[i]);
-		return rv;
-	  }
+	    if((rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, cbuf[i], 1)) < 0) {
+            fprintf(stderr, FLFMT "failed to send %dth byte %d\n", FL, i, cbuf[i]);
+            return rv;
+        }
 	}
 
 	/* And send 0x03 as end of frame */
 	databyte = (uint8_t) DIAG_VAG_END_FRAME;
-       	if ( (rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, databyte, 0)) < 0) {
-		fprintf(stderr, FLFMT "failed to send end of block %x\n", FL,
-			databyte);
+    if((rv = diag_l2_proto_kw1281_send_byte(d_l2_conn, databyte, 0)) < 0) {
+		fprintf(stderr, FLFMT "failed to send end of block %x\n", FL, databyte);
 		return rv;
 	}
 	
@@ -1005,11 +943,9 @@ diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
  * getting one message per frame, and we will wait a bit longer
  * for extra messages
  */
-static int
-diag_l2_proto_kw1281_recv(struct diag_l2_conn *d_l2_conn, int timeout,
-	void (*callback)(void *handle, struct diag_msg *msg),
-	void *handle)
-{
+static int diag_l2_proto_kw1281_recv(struct diag_l2_conn *d_l2_conn, int timeout,
+		void (*callback)(void *handle, struct diag_msg *msg), 	void *handle) {
+
 	int rv = 0;
 	struct diag_msg *tmsg;
 
@@ -1054,11 +990,15 @@ diag_l2_proto_kw1281_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *ms
 	switch((msg->data[0] & 0xff)) {
 	  case DIAG_VAG_MONITOR:
 	  /* push groups to monitor */
+		if(NULL == dp->monitor)
+			d_l2_conn->diag_l2_p3max = KW_1281_TIM_MAX_P3_MONITOR;
 	    dp->monitor = push_monitor(dp->monitor, msg->data[1]);
 	    break;
 	  case DIAG_VAG_STOP_MONITOR:
 	  /* pop groups to monitor */
 	    dp->monitor = pop_monitor(dp->monitor, msg->data[1]);
+		if(NULL == dp->monitor)
+			d_l2_conn->diag_l2_p3max = KW_1281_TIM_MAX_P3;
 	    break;
 	  case DIAG_VAG_SHOW_MONITOR:
 	  /* shows groups on monitor list */
@@ -1068,22 +1008,20 @@ diag_l2_proto_kw1281_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *ms
 	    dp->master = 1;
 	    rv = diag_l2_send(d_l2_conn, msg);
 // 	    rv = diag_l2_proto_kw1281_send(d_l2_conn, msg);
-	    if (rv < 0)
-	    {
-		fprintf(stderr, FLFMT "failed to send message\n", FL);
-		*errval = rv;
-		return NULL;
+	    if(rv<0) {
+		    fprintf(stderr, FLFMT "failed to send message\n", FL);
+		    *errval = rv;
+		    return NULL;
 	    }
 
 	    /* And wait for response */
-
 	    rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_kw1281_data_rcv, NULL);
 // 	    rv = diag_l2_proto_kw1281_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_kw1281_data_rcv, NULL);
-	    if (rv < 0) {
+	    if(rv<0) {
 		/* Error */
-		fprintf(stderr, FLFMT "failed to receive messages\n", FL);
-		*errval = rv;
-		return NULL;
+		    fprintf(stderr, FLFMT "failed to receive messages\n", FL);
+		    *errval = rv;
+		    return NULL;
 	    }
 	    dp->master = 0;
 	}
@@ -1139,75 +1077,109 @@ diag_l2_proto_kw1281_stopcomms(struct diag_l2_conn* d_l2_conn __attribute__((unu
 	return 0;
 }
 
+char *
+rfc8601_timespec(struct timespec *tv)
+{
+  char time_str[127];
+  double fractional_seconds;
+  int microseconds;
+  struct tm tm; // our "broken down time"
+  char *rfc8601;
+
+  rfc8601 = malloc(256);
+
+  memset(&tm, 0, sizeof(struct tm));
+  sprintf(time_str, "%ld UTC", tv->tv_sec);
+
+  // convert our timespec into broken down time
+  strptime(time_str, "%s %U", &tm);
+
+  // do the math to convert nanoseconds to integer microseconds
+  fractional_seconds = (double) tv->tv_nsec;
+  fractional_seconds /= 1000;
+  fractional_seconds = round(fractional_seconds);
+  microseconds = (int) fractional_seconds;
+
+  // print date and time without microseconds
+  strftime(time_str, sizeof(time_str), "%Y-%m-%dT%H:%M:%S", &tm);
+
+  // add on the fractional seconds and Z for the UTC Timezone
+  sprintf(rfc8601, "%s.%dZ", time_str, microseconds);
+
+  return rfc8601;
+}
+
 /*
  * Timeout, - if we don't send something to the ECU it will timeout
  * soon, so send it a keepalive message now.
  */
-static void
-diag_l2_proto_kw1281_timeout(struct diag_l2_conn *d_l2_conn)
+static void diag_l2_proto_kw1281_timeout(struct diag_l2_conn *d_l2_conn)
 {
+
 	struct diag_l2_kw1281 *dp;
 	struct diag_msg	msg;
 	struct monitor_type *ptr;
 	uint8_t databyte, buff[2];
 	int rv = 0;
 
+    struct timespec tv;
+    char *rfc8601;
+
 	dp = (struct diag_l2_kw1281 *)d_l2_conn->diag_l2_proto_data;
 
 	if (diag_l2_debug & DIAG_DEBUG_TIMER)
-	{
-		fprintf(stderr, FLFMT "timeout impending for %p\n",
-				FL, d_l2_conn);
-	}
+		fprintf(stderr, FLFMT "timeout impending for %p\n", FL, d_l2_conn);
+
 	if(dp->state < STATE_ESTABLISHED || dp->master)
-	  return;
+	    return;
 
 	if(dp->monitor) {
+	    clock_gettime(CLOCK_REALTIME, &tv);
+	    rfc8601 = rfc8601_timespec(&tv);
 
-	      if (diag_calloc(&msg.data, 2)) {
-		fprintf(stderr,
- 		 	FLFMT "diag_calloc failed for KW1281\n", FL);
-		return;
-	      }
-	      msg.len = 2;
-	      buff[0] = (0xff & (uint8_t) DIAG_VAG_CMD_DATA_OTHER);
+	    if (diag_calloc(&msg.data, 2)) {
+		    fprintf(stderr,	FLFMT "diag_calloc failed for KW1281\n", FL);
+		    return;
+	    }
+	    msg.len = 2;
+	    buff[0] = (0xff & (uint8_t) DIAG_VAG_CMD_DATA_OTHER);
 
-	      ptr = dp->monitor;
+	    ptr = dp->monitor;
+        while(ptr) {
+		    buff[1] = ptr->value;
+		    memcpy(msg.data, &buff[0], 2*sizeof(uint8_t));
 
-	      while(ptr) {
-		buff[1] = ptr->value;
-		memcpy(msg.data, &buff[0], 2*sizeof(uint8_t));
-
-		printf("Group read, group %d\n", ptr->value);
-		(void) diag_l2_proto_kw1281_request(d_l2_conn, &msg, &rv);
-		if (rv < 0) {
-		  free(msg.data);
-		  fprintf(stderr, FLFMT "failed to monitor group %d\n", FL, ptr->value);
-		  return;
-		}
-		ptr = ptr->next;
-	      }
+		    printf("%s monitor group read, group %d", rfc8601, ptr->value);
+		    (void) diag_l2_proto_kw1281_request(d_l2_conn, &msg, &rv);
+		    if (rv < 0) {
+		      free(msg.data);
+		      fprintf(stderr, FLFMT "failed to monitor group %d\n", FL, ptr->value);
+		      return;
+		    }
+		    ptr = ptr->next;
+	    }
+		free(rfc8601);
 	} else {
-	      if (diag_calloc(&msg.data, 1)) {
-		fprintf(stderr,
- 		 	FLFMT "diag_calloc failed for KW1281\n", FL);
-		return;
-	      }
-	      msg.len = 1;
-	      databyte = (0xff & (uint8_t) DIAG_VAG_CMD_ACK);
-	      memcpy(msg.data, &databyte, sizeof(uint8_t));
+	    if (diag_calloc(&msg.data, 1)) {
+            fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
+            return;
+	    }
+	    msg.len = 1;
+	    databyte = (0xff & (uint8_t) DIAG_VAG_CMD_ACK);
+	    memcpy(msg.data, &databyte, sizeof(uint8_t));
 
-	      (void) diag_l2_proto_kw1281_request(d_l2_conn, &msg, &rv);
+	    (void) diag_l2_proto_kw1281_request(d_l2_conn, &msg, &rv);
 
-	      if (rv < 0) {
-		free(msg.data);
-		fprintf(stderr, FLFMT "failed to send a stay-alive ACK on the timeout\n", FL);
-		return;
-	      }
+	    if (rv < 0) {
+		    free(msg.data);
+		    fprintf(stderr, FLFMT "failed to send a stay-alive ACK on the timeout\n", FL);
+		    return;
+	    }
 	}
 	free(msg.data);
 	    
 	return;
+
 }
 
 static const struct diag_l2_proto diag_l2_proto_kw1281 = {

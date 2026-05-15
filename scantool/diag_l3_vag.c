@@ -130,7 +130,6 @@ struct diag_msg *msg, char *buf, size_t bufsize)
 		s = "Hex Data";
 		break;
 	default:
-		/* XXX The argument Was "buf[2]" and not msg->data[2], which must be wrong. */
 		snprintf(buf3, sizeof(buf3), "0x%x", msg->data[2]);
 		s = buf3;
 		break;

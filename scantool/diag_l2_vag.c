@@ -44,8 +44,6 @@
 
 #include "diag_l2_vag.h" /* prototypes for this file */
 
-CVSID("$Id: diag_l2_vag.c,v 1.3 2004/07/03 02:04:18 vnevoa Exp $");
-
 /*
  * ISO vag specific data
  */
@@ -386,29 +384,14 @@ struct diag_l2_conn *d_l2_conn,
  * and physical addressing. The ISOvag spec describes CARB initialisation
  * which is done in the ISO9141 code
  */
-#ifdef WIN32
-static int
-diag_l2_proto_vag_startcomms( struct diag_l2_conn *d_l2_conn,
-flag_type flags,
-int bitrate, target_type target, source_type source)
-#else
-static int
-diag_l2_proto_vag_startcomms( struct diag_l2_conn *d_l2_conn,
-flag_type flags __attribute__((unused)),
-int bitrate, target_type target, source_type source __attribute__((unused)))
-#endif
-{
+static int diag_l2_proto_vag_startcomms( struct diag_l2_conn *d_l2_conn, flag_type flags __attribute__((unused)),
+    int bitrate, target_type target, source_type source __attribute__((unused))) {
+
 	struct diag_serial_settings set;
 	struct diag_l2_vag *dp;
-/*	struct diag_msg	msg;*/
 	uint8_t data[MAXRBUF];
 	int rv;
-/*	int wait_time;*/
-/*	int hdrlen;*/
-/*	int datalen;*/
-/*	int datasrc;*/
 	uint8_t cbuf[MAXRBUF];
-/*	int len;*/
 
 	struct diag_l1_initbus_args in;
 
@@ -416,7 +399,6 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 		return(DIAG_ERR_NOMEM);
 
 	d_l2_conn->diag_l2_proto_data = (void *)dp;
-
 
 	memset(data, 0, sizeof(data));
 
@@ -433,7 +415,7 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 	set.parflag = diag_par_n;
 
 	/* Set the speed as shown */
-	rv = diag_l1_setspeed( d_l2_conn->diag_link->diag_l2_dl0d, &set);
+	rv = diag_l1_setspeed(d_l2_conn->diag_link->diag_l2_dl0d, &set);
 	if (rv < 0)
 	{
 		free(dp);
@@ -450,18 +432,17 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 	in.addr = target;
 	rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
 	if (rv < 0)
-		return(-1); /* XXX */
-
+		return -1;
 
 	/* Mode bytes are in 7-Odd-1, read as 8N1 and ignore parity */
 	rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		cbuf, 1, 100);
 	if (rv < 0)
-		return(-1); /* XXX */
+		return -1;
 	rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		&cbuf[1], 1, 100);
 	if (rv < 0)
-		return(-1); /* XXX */
+		return -1;
 
 	/* Keybytes are 0x1 0x8a for VAG protocol */
 	if (cbuf[0] != 0x01)
@@ -476,24 +457,20 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
 	if ( (d_l2_conn->diag_link->diag_l2_l1flags
 		& DIAG_L1_DOESSLOWINIT) == 0)
 	{
-
 		/*
 		 * Now transmit KB2 inverted
 		 */
 		cbuf[0] = ~ d_l2_conn->diag_l2_kb2;
 		rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 			cbuf, 1, d_l2_conn->diag_l2_p4min);
-
 	}
-
 
 	/*
 	 * Now receive the first 3 messages
 	 * which show ECU versions etc
 	 */
 
-
-	return(0);
+	return 0;
 }
 
 /*
@@ -507,21 +484,13 @@ int bitrate, target_type target, source_type source __attribute__((unused)))
  *
  * 1st byte of message is command, followed by data
  */
-static int
-diag_l2_proto_vag_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
-{
+static int diag_l2_proto_vag_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
+
 	int rv = 0;
-/*	int i;*/
-/*	int csum;*/
-/*	int len;*/
-/*	uint8_t buf[MAXRBUF];*/
-/*	int offset;*/
 	struct diag_l2_vag *dp;
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
-		fprintf(stderr,
-			FLFMT "diag_l2_vag_send %p msg %p len %d called\n",
-				FL, d_l2_conn, msg, msg->len);
+		fprintf(stderr, FLFMT "diag_l2_vag_send %p msg %p len %d called\n",	FL, d_l2_conn, msg, msg->len);
 
 	dp = (struct diag_l2_vag *)d_l2_conn->diag_l2_proto_data;
 
@@ -531,10 +500,10 @@ diag_l2_proto_vag_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 #endif
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
-		fprintf(stderr, FLFMT "send about to return %d\n",
-				FL, rv);
+		fprintf(stderr, FLFMT "send about to return %d\n", FL, rv);
 
-	return(rv);
+	return rv;
+
 }
 
 /*
@@ -550,11 +519,9 @@ diag_l2_proto_vag_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
  * getting one message per frame, and we will wait a bit longer
  * for extra messages
  */
-static int
-diag_l2_proto_vag_recv(struct diag_l2_conn *d_l2_conn, int timeout,
-	void (*callback)(void *handle, struct diag_msg *msg),
-	void *handle)
-{
+static int diag_l2_proto_vag_recv(struct diag_l2_conn *d_l2_conn, int timeout, 	void (*callback)(void *handle,
+		struct diag_msg *msg), void *handle) {
+
 	uint8_t data[256];
 	int rv;
 	int datalen;
@@ -566,10 +533,7 @@ diag_l2_proto_vag_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 		return(rv);
 
 	if (diag_l2_debug & DIAG_DEBUG_READ)
-	{
-		fprintf(stderr, FLFMT "calling rcv callback %p handle %p\n", FL,
-			callback, handle);
-	}
+		fprintf(stderr, FLFMT "calling rcv callback %p handle %p\n", FL, callback, handle);
 
 	/*
 	 * Call user callback routine
@@ -582,11 +546,10 @@ diag_l2_proto_vag_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 	d_l2_conn->diag_msg = NULL;
 
 	if (diag_l2_debug & DIAG_DEBUG_READ)
-	{
 		fprintf(stderr, FLFMT "rcv callback completed\n", FL);
-	}
 
-	return(0);
+	return 0;
+
 }
 
 static struct diag_msg *

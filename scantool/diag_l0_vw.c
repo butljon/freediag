@@ -43,8 +43,6 @@
 #include "diag_tty.h"
 #include "diag_l1.h"
 
-CVSID("$Id: diag_l0_vw.c,v 1.6 2011/05/29 15:00:35 fenugrec Exp $");
-
 /*
  * VAGTool compatible ISO-9141 'L and K' Line interface
  * under a POSIX like system connected to a serial port.
