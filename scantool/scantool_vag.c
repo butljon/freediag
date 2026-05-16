@@ -165,7 +165,6 @@ int do_l2_kwp20k_start(int init_type) {
 	buff[1] = 0x89;
 	memcpy(msg.data, &buff[0], msg.len*sizeof(uint8_t));
 
-//	diag_os_millisleep(25);
 	/*
 	 * Important to get a diag_l2_send call in here because the timestamps for calls to the
 	 * timeout function (to send DIAG_KW2K_SI_TP messages to maintain the connection) are reset
@@ -182,7 +181,8 @@ int do_l2_kwp20k_start(int init_type) {
 	}
 	free(msg.data);
 
-	diag_os_millisleep(25);
+	//yyy diag_os_millisleep(25);
+	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 // 	rv =diag_l2_recv(global_l2_conn, 1000, NULL, NULL);
 	
@@ -199,7 +199,8 @@ int do_l2_kwp20k_start(int init_type) {
 	buff[1] = 0x9B;
 	memcpy(msg.data, &buff[0], msg.len*sizeof(uint8_t));
 
-	diag_os_millisleep(25);
+	//yyy diag_os_millisleep(25);
+	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	(void) diag_l2_send(global_l2_conn, &msg);
 	if(errVal < 0) {
 		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -207,7 +208,8 @@ int do_l2_kwp20k_start(int init_type) {
 	}
 	free(msg.data);
 
-	diag_os_millisleep(25);
+	//yyy diag_os_millisleep(25);
+	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 // 	rv =diag_l2_recv(global_l2_conn, 1000, NULL, NULL);
 	
@@ -432,7 +434,8 @@ int cmd_vag_groupread(int argc __attribute__((unused)), char **argv __attribute_
 		        fprintf(stderr, FLFMT "Failed read group %d\n", FL, i);
 		        return CMD_FAILED;
 	        }
-	        diag_os_millisleep(25);
+	        //yyy diag_os_millisleep(ISO_14230_TIM_MIN_P2);
+	    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	    }
   	}
   	else {
@@ -475,7 +478,8 @@ int cmd_vag_readaexgrps(int argc __attribute__((unused)), char **argv __attribut
 		    fprintf(stderr, FLFMT "Failed read group %d\n", FL, aex_motor_groups[i]);
 		    return CMD_FAILED;	      
 	    }
-		diag_os_millisleep(25);
+		//yyy diag_os_millisleep(ISO_14230_TIM_MIN_P2);
+		diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	}
   	
 	return CMD_OK;

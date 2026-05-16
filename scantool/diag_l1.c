@@ -191,8 +191,8 @@ diag_l1_send(struct diag_l0_device *dl0d, const char *subinterface, const void *
 	 */ 
 	l0flags = diag_l1_getflags(dl0d);
 
-	if (   ((p4 == 0) && ((l0flags & DIAG_L1_HALFDUPLEX) == 0)) ||
-		(l0flags & DIAG_L1_DOESL2FRAME) || (l0flags & DIAG_L1_DOESP4WAIT) ) {
+	if (((p4 == 0) && ((l0flags & DIAG_L1_HALFDUPLEX) == 0)) ||
+			(l0flags & DIAG_L1_DOESL2FRAME) || (l0flags & DIAG_L1_DOESP4WAIT)) {
 		/*
 		 * Send the lot if we don't need to delay, or collect
 		 * the echos
@@ -200,7 +200,6 @@ diag_l1_send(struct diag_l0_device *dl0d, const char *subinterface, const void *
 		rv = (dl0->diag_l0_send)(dl0d, subinterface, data, len);
 	} else {
 		const uint8_t *dp = (const uint8_t *)data;
-
 		/* Send each byte */
 		while (len--) {
 			rv = (dl0->diag_l0_send)(dl0d, subinterface, dp, 1);
@@ -232,7 +231,6 @@ diag_l1_send(struct diag_l0_device *dl0d, const char *subinterface, const void *
 				}
 			}
 			dp++;
-
 			if (p4)	/* Inter byte gap */
 				diag_os_millisleep(p4);
 		}

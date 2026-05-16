@@ -141,7 +141,7 @@ extern "C" {
 void
 l2_kw1281_data_rcv(void *handle, struct diag_msg *msg);
 
-#define KW_1281_TIM_MIN_P3      1000
+#define KW_1281_TIM_MIN_P3      100
 #define KW_1281_TIM_MAX_P3      1000
 #define KW_1281_TIM_MAX_P3_MONITOR      300
 

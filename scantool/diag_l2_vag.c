@@ -70,101 +70,89 @@ struct diag_l2_vag
 /*
  * Decode the message header
  */
-static int
-diag_l2_proto_vag_decode(char *data, int len,
-		 int *hdrlen, int *datalen, int *source, int *dest,
-		int first_frame)
-{
-	int dl;
+static int diag_l2_proto_vag_decode(char *data, int len, int *hdrlen, int *datalen, int *source, int *dest, int first_frame) {
 
-	if (diag_l2_debug & DIAG_DEBUG_PROTO)
-	{
+	int dl;
+	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
 		int i;
 		fprintf(stderr, FLFMT "decode len %d", FL, len);
 		for (i = 0; i < len ; i++)
 			fprintf(stderr, " 0x%x", data[i]&0xff);
-
 		fprintf(stderr, "\n");
 	}
 	
 	dl = data[0] & 0x3f;
-	if (dl == 0)
-	{
+	if (dl == 0) {
 		/* Additional length field present */
-		switch (data[0] & 0xC0)
-		{
-		case 0x80:
-		case 0xC0:
+		switch (data[0] & 0xC0) {
+		    case 0x80:
+		    case 0xC0:
 			/* Addresses supplied, additional len byte */
-			if (len < 4)
-			{
-				if (diag_l2_debug & DIAG_DEBUG_PROTO)
-					fprintf(stderr, FLFMT "decode len short \n", FL);
-				return(diag_iseterr(DIAG_ERR_INCDATA));
-			}
-			*hdrlen = 4;
-			*datalen = data[3];
-			if (dest)
-				*dest = data[1];
-			if (source)
-				*source = data[2];
-			break;
-		case 0x00:
+			    if (len < 4) {
+				    if (diag_l2_debug & DIAG_DEBUG_PROTO)
+					    fprintf(stderr, FLFMT "decode len short \n", FL);
+				    return diag_iseterr(DIAG_ERR_INCDATA);
+			    }
+			    *hdrlen = 4;
+			    *datalen = data[3];
+			    if (dest)
+				    *dest = data[1];
+			    if (source)
+				    *source = data[2];
+			    break;
+		    case 0x00:
 			/* Addresses not supplied, additional len byte */
-			if (first_frame)
-				return(diag_iseterr(DIAG_ERR_BADDATA));
-			if (len < 2)
-				return(diag_iseterr(DIAG_ERR_INCDATA));
-			*hdrlen = 2;
-			*datalen = data[1];
-			if (dest)
-				*dest = 0;
-			if (source)
-				*source = 0;
-			break;
-		case 0X40:
+			    if (first_frame)
+				    return diag_iseterr(DIAG_ERR_BADDATA);
+			    if (len < 2)
+				    return diag_iseterr(DIAG_ERR_INCDATA);
+			    *hdrlen = 2;
+			    *datalen = data[1];
+			    if (dest)
+				    *dest = 0;
+			    if (source)
+				    *source = 0;
+			    break;
+		    case 0X40:
 			/* CARB MODE */
-			return(diag_iseterr(DIAG_ERR_BADDATA));
+			    return diag_iseterr(DIAG_ERR_BADDATA);
 		}
-	}
-	else
-	{
+	} else {
 		/* Additional length field not present */
-		switch (data[0] & 0xC0)
-		{
-		case 0x80:
-		case 0xC0:
+		switch (data[0] & 0xC0) {
+		    case 0x80:
+		    case 0xC0:
 			/* Addresses supplied, NO additional len byte */
-			if (len < 3)
-				return(diag_iseterr(DIAG_ERR_INCDATA));
-			*hdrlen = 3;
-			*datalen = dl;
-			if (dest)
-				*dest = data[1];
-			if (source)
-				*source = data[2];
-			break;
-		case 0x00:
+			    if (len < 3)
+				    return diag_iseterr(DIAG_ERR_INCDATA);
+			    *hdrlen = 3;
+			    *datalen = dl;
+			    if (dest)
+				    *dest = data[1];
+			    if (source)
+				    *source = data[2];
+			    break;
+		    case 0x00:
 			/* Addresses not supplied, No additional len byte */
-			if (first_frame)
-				return(diag_iseterr(DIAG_ERR_BADDATA));
-			*hdrlen = 1;
-			*datalen = dl;
-			if (dest)
-				*dest = 0;
-			if (source)
-				*source = 0;
-			break;
-		case 0X40:
+			    if (first_frame)
+				    return diag_iseterr(DIAG_ERR_BADDATA);
+			    *hdrlen = 1;
+			    *datalen = dl;
+			    if (dest)
+				    *dest = 0;
+			    if (source)
+				    *source = 0;
+			    break;
+		    case 0X40:
 			/* CARB MODE */
-			return(diag_iseterr(DIAG_ERR_BADDATA));
+			    return diag_iseterr(DIAG_ERR_BADDATA);
 		}
 	}
 	/*
 	 * If len is silly [i.e 0] we've got this mid stream
 	 */
 	if (*datalen == 0)
-		return(diag_iseterr(DIAG_ERR_BADDATA));
+		return diag_iseterr(DIAG_ERR_BADDATA);
 
 	/*
 	 * And confirm data is long enough, incl cksum
@@ -172,9 +160,10 @@ diag_l2_proto_vag_decode(char *data, int len,
 	 */
 
 	if (len < (*hdrlen + *datalen + 1))
-		return(diag_iseterr(DIAG_ERR_INCDATA));
+		return diag_iseterr(DIAG_ERR_INCDATA);
 
-	return(0);
+	return 0;
+
 }
 #endif
 
@@ -189,34 +178,19 @@ diag_l2_proto_vag_decode(char *data, int len,
  * us a complete message, and we will wait a little bit longer than the normal
  * timeout to detect "end of all responses"
  */
-#ifdef WIN32
-static int
-diag_l2_proto_vag_int_recv(struct diag_l2_conn *d_l2_conn, 
-int timeout,
-uint8_t *data, 
-int *datalen)
-#else
-static int
-diag_l2_proto_vag_int_recv(struct diag_l2_conn *d_l2_conn, 
-int timeout __attribute__((unused)),
-uint8_t *data __attribute__((unused)), 
-int *datalen __attribute__((unused)))
-#endif
-{
+static int diag_l2_proto_vag_int_recv(struct diag_l2_conn *d_l2_conn, int timeout __attribute__((unused)),
+		uint8_t *data __attribute__((unused)), int *datalen __attribute__((unused))) {
+
 	struct diag_l2_vag *dp;
 	int rv = 0;
 /*	struct diag_msg	*tmsg;*/
 
 	dp = (struct diag_l2_vag *)d_l2_conn->diag_l2_proto_data;
-
 	if (diag_l2_debug & DIAG_DEBUG_READ)
-		fprintf(stderr,
-			FLFMT "diag_l2_vag_intrecv offset %x\n",
-				FL, dp->rxoffset);
+		fprintf(stderr, FLFMT "diag_l2_vag_intrecv offset %x\n", FL, dp->rxoffset);
 
 	/* Clear out last received message if not done already */
-	if (d_l2_conn->diag_msg)
-	{
+	if (d_l2_conn->diag_msg) {
 		diag_freemsg(d_l2_conn->diag_msg);
 		d_l2_conn->diag_msg = NULL;
 	}
@@ -224,19 +198,14 @@ int *datalen __attribute__((unused)))
 	/*
 	 * And receive the new message
 	 */
-
 #if notdef
-
 	/*
 	 * Now check the messages that we have checksum etc, stripping
 	 * off headers etc
 	 */
-	if (rv >= 0)
-	{
+	if (rv >= 0) {
 		tmsg = d_l2_conn->diag_msg;
-
-		while (tmsg)
-		{
+		while (tmsg) {
 			struct diag_l2_vag *dp;
 			int hdrlen, datalen, source, dest;
 
@@ -245,28 +214,21 @@ int *datalen __attribute__((unused)))
 			 * need to strip the header and checksum
 			 */
 			dp = (struct diag_l2_vag *)d_l2_conn->diag_l2_proto_data;
-			rv = diag_l2_proto_vag_decode( tmsg->data,
-				tmsg->len,
-				&hdrlen, &datalen, &source, &dest,
-				dp->first_frame);
+			rv = diag_l2_proto_vag_decode( tmsg->data, tmsg->len, &hdrlen, &datalen, &source, &dest, dp->first_frame);
 			
-			if (rv < 0)		/* decode failure */
-			{
-				return(rv);
-			}
+			if (rv < 0)
+				/* decode failure */
+				return rv;
 #if FULL_DEBUG
-			fprintf(stderr, "msg %x decode done rv %d hdrlen %d datalen %d source %02x dest %02x\n",
-				tmsg, rv, hdrlen, datalen, source, dest);
+			fprintf(stderr, "msg %x decode done rv %d hdrlen %d datalen %d source %02x dest %02x\n", tmsg, rv, hdrlen,
+					datalen, source, dest);
 #endif
-
 			if (tmsg->data[0] & 0xC0 == 0xC0)
-			{
 				tmsg->fmt = DIAG_FMT_ISO_FUNCADDR;
-			} else {
+			else
 				tmsg->fmt = 0;
-			}
 
-			tmsg->fmt |= DIAG_FMT_FRAMED | DIAG_FMT_DATAONLY ;
+			tmsg->fmt |= DIAG_FMT_FRAMED | DIAG_FMT_DATAONLY;
 			tmsg->fmt |= DIAG_FMT_CKSUMMED;
 
 			tmsg->src = source;
@@ -280,7 +242,8 @@ int *datalen __attribute__((unused)))
 		}
 	}
 #endif
-	return(rv);
+	return rv ;
+
 }
 
 
@@ -288,16 +251,14 @@ int *datalen __attribute__((unused)))
 /*
  * Send a byte, and ensure we get the inverted ack back
  */
-static int
-diag_l2_proto_vag_send_byte(struct diag_l2_conn *d_l2_conn, databyte_type databyte)
-{
+static int diag_l2_proto_vag_send_byte(struct diag_l2_conn *d_l2_conn, databyte_type databyte) {
+
 	uint8_t rx_data = 0;
 	int rv;
 
 	/* Send the data byte */
 	uint8_t db = (uint8_t)databyte;
-	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		&db, 1, d_l2_conn->diag_l2_p4min);
+	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, d_l2_conn->diag_l2_p4min);
 	if (rv < 0)
 		return(rv);
 
