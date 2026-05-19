@@ -898,7 +898,6 @@ diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
 	/* Build the new message */
-
 	if (dp->modeflags & DIAG_L2_TYPE_FUNCADDR)
 		buf[0] = 0xC0;
 	else
@@ -917,7 +916,6 @@ diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 /* XXX, check mode flag that specifies always use 4 byte hdr ,
 	or mode flag showing never use extended header, and
 		received keybytes */
-
 	if (msg->len < 64) {
 		if (msg->len < 1)
 			return diag_iseterr(DIAG_ERR_BADLEN);
