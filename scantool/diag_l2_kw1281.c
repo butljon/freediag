@@ -472,7 +472,6 @@ static int diag_l2_proto_kw1281_recv_byte(struct diag_l2_conn *d_l2_conn, int ti
     int rv;
 	uint8_t db;
 
-	//yyy diag_os_millisleep(5);
 	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
      /* receive 1 byte */
     rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, databyte, 1, timeout);
@@ -484,7 +483,6 @@ static int diag_l2_proto_kw1281_recv_byte(struct diag_l2_conn *d_l2_conn, int ti
 	//fprintf(stderr, FLFMT "received byte %x\n", FL, *databyte);
 	
 	if(!end) {
-	    //yyy diag_os_millisleep(5);
 		diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 	    db = *databyte;
 	    db = ~db;
@@ -611,7 +609,6 @@ static int diag_l2_proto_kw1281_int_recv(struct diag_l2_conn *d_l2_conn, int tim
    	}
 	bytes +=rv;
 
-	//yyy diag_os_millisleep(5);
 	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 	tmsg = d_l2_conn->diag_msg;
     /* get the rest */
@@ -643,7 +640,6 @@ static int diag_l2_proto_kw1281_int_recv(struct diag_l2_conn *d_l2_conn, int tim
 	    bytes += rv;
  	    tmsg = tmsg->next;
 
- 		//yyy diag_os_millisleep(5);
  		diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 
 	}
@@ -660,7 +656,6 @@ static int diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databy
 	uint8_t db = (uint8_t)databyte;
 	int rv = 0;
 
-	//yyy diag_os_millisleep(5);
 	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 
 	/* Send the data byte */
@@ -679,7 +674,6 @@ static int diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databy
 	/* receive 1 byte */
     if(end)
 	{
-    	//yyy diag_os_millisleep(5);
     	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 
 	    rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, KW_1281_TIM_MIN_P3);
@@ -775,14 +769,12 @@ static int diag_l2_proto_kw1281_startcomms(struct diag_l2_conn *d_l2_conn, flag_
 	}
 
 	/* Key bytes are in 7-Odd-1, read as 8N1 and ignore parity */
-//yyy	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, d_l2_conn->diag_l2_p3min);
 	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, W2max);
 	if(rv < 0) {
 	    fprintf(stderr, FLFMT "Failed to receive 1st key mode byte\n", FL);
 	    return rv;
 	}
 
-//yyy	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[1], 1, d_l2_conn->diag_l2_p3min);
 	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[1], 1, W3max);
 	if(rv < 0) {
 	    fprintf(stderr, FLFMT "Failed to receive 2nd key mode byte\n", FL);
@@ -899,8 +891,7 @@ static int diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag
 		fprintf(stderr, FLFMT "failed to send end of block %x\n", FL, databyte);
 		return rv;
 	}
-	
-	//yyy diag_os_millisleep(5);
+
 	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 
 	return msg->len+3;
