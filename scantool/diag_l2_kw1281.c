@@ -790,7 +790,7 @@ static int diag_l2_proto_kw1281_startcomms(struct diag_l2_conn *d_l2_conn, flag_
 	  	/*
 		 * Now transmit KB2 inverted
 		 */
-		cbuf[0] = ~ cbuf[1];
+		cbuf[0] = ~cbuf[1];
 		rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf, 1, d_l2_conn->diag_l2_p4min);
 		if(rv < 0) {
 	  	    fprintf(stderr, FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
