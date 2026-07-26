@@ -272,7 +272,7 @@ void show_monitor(struct monitor_type *node) {
 
 }
 
-void decode_value(struct diag_msg *tmsg, int i) {
+void decode_value_kw1281(struct diag_msg *tmsg, int i) {
 
     int j;
     uint8_t displayBit, value;
@@ -389,7 +389,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		            printf("(Sensor) block %d, block id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		            printf("sensor bytes: <%x>", tmsg->data[i+1]);
 		            printf("<%x>\n", tmsg->data[i+2]);
-		            decode_value(tmsg, i);
+		            decode_value_kw1281(tmsg, i);
 		        }
 		        printf("\n");
 		        break;
@@ -1034,33 +1034,14 @@ int diag_l2_proto_kw1281_stopcomms(struct diag_l2_conn* d_l2_conn __attribute__(
 
 }
 
-char *rfc8601_timespec(struct timespec *tv) {
+char *rfc8601_timespec(struct timespec *ts) {
 
-    char time_str[127];
-    double fractional_seconds;
-    int microseconds;
-    struct tm tm; // our "broken down time"
-    char *rfc8601;
+    char time_str[30], *rfc8601;
 
-    rfc8601 = malloc(256);
+	rfc8601 = malloc(30);
 
-    memset(&tm, 0, sizeof(struct tm));
-    sprintf(time_str, "%ld UTC", tv->tv_sec);
-
-  // convert our timespec into broken down time
-    strptime(time_str, "%s %U", &tm);
-
-  // do the math to convert nanoseconds to integer microseconds
-    fractional_seconds = (double) tv->tv_nsec;
-    fractional_seconds /= 1000;
-    fractional_seconds = round(fractional_seconds);
-    microseconds = (int) fractional_seconds;
-
-  // print date and time without microseconds
-    strftime(time_str, sizeof(time_str), "%Y-%m-%dT%H:%M:%S", &tm);
-
-  // add on the fractional seconds and Z for the UTC Timezone
-    sprintf(rfc8601, "%s.%dZ", time_str, microseconds);
+	strftime(time_str, sizeof time_str, "%FT%T", gmtime(&ts->tv_sec));
+	sprintf(rfc8601, "%s.%09ldZ\n", time_str, ts->tv_nsec);
 
     return rfc8601;
 
@@ -1105,7 +1086,7 @@ static void diag_l2_proto_kw1281_timeout(struct diag_l2_conn *d_l2_conn) {
 		    buff[1] = ptr->value;
 		    memcpy(msg.data, &buff[0], 2*sizeof(uint8_t));
 
-		    printf("%s monitor group read, group %d", rfc8601, ptr->value);
+		    printf("%s monitor group read, group %d ", rfc8601, ptr->value);
 		    (void) diag_l2_proto_kw1281_request(d_l2_conn, &msg, &rv);
 		    if(rv < 0) {
 		      free(msg.data);

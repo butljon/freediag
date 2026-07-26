@@ -57,13 +57,12 @@ const char *	set_ecu;	/* ECU name */
 //const char  *	set_interface;	/* H/w interface to use */
 #define DEFAULT_INTERFACE 5	//index into l0_names below
 const struct l0_name l0_names[] = { {"MET16", MET16}, {"SE9141", SE9141}, {"VAGTOOL", VAGTOOL},
-			{"BR1", BR1}, {"ELM", ELM}, {"CARSIM", CARSIM}, {"DUMB", DUMB}, {"FTDI", FTDI}, NULL};
+			{"BR1", BR1}, {"ELM", ELM}, {"DUMB", DUMB}, {"FTDI", FTDI}, NULL};
 
 enum l0_nameindex set_interface;	//hw interface to use
 
 char set_subinterface[SUBINTERFACE_MAX];		/* and sub-interface ID */
 
-char *set_simfile;	//source for simulation data
 extern void diag_l0_sim_setfile(char * fname);
 
 /*
@@ -92,22 +91,9 @@ int set_init(void)
 
 	strncpy(set_subinterface,"/dev/null",sizeof(set_subinterface));
 	printf( "%s: Interface set to default: %s on %s\n", progname, l0_names[set_interface_idx].longname, set_subinterface);
-
-	if (diag_calloc(&set_simfile, strlen(DB_FILE)+1))
-		return diag_iseterr(DIAG_ERR_GENERAL);	
-	strcpy(set_simfile, DB_FILE);			//default simfile for use with CARSIM
-	diag_l0_sim_setfile(set_simfile);
 	
 	return 0;
 }
-
-void set_close(void)
-{
-	if (set_simfile)
-		free(set_simfile);
-	return;
-}
-
 
 /* Return values from the commands */
 #define CMD_OK		0	/* OK */
@@ -131,7 +117,6 @@ static int cmd_set_l2protocol(int argc, char **argv);
 static int cmd_set_initmode(int argc, char **argv);
 static int cmd_set_display(int argc, char **argv);
 static int cmd_set_interface(int argc, char **argv);
-static int cmd_set_simfile(int argc, char **argv);
 
 const struct cmd_tbl_entry set_cmd_table[] =
 {
@@ -140,9 +125,6 @@ const struct cmd_tbl_entry set_cmd_table[] =
 
 	{ "interface", "interface NAME [id]", "Shows/Sets the interface to use. Use set interface ? to get a list of names",
 		cmd_set_interface, 0, NULL},
-		
-	{ "simfile", "simfile [filename]", "Select simulation file to use as data input. See freediag_carsim.db for an example",
-		cmd_set_simfile, 0, NULL},
 
 	{ "display", "display [english/metric]", "Sets english or metric display",
 		cmd_set_display, 0, NULL},
@@ -218,8 +200,6 @@ char **argv __attribute__((unused)))
 	}
 
 	printf("interface: %s on %s\n", l0_names[set_interface_idx].longname, set_subinterface);
-	if (set_interface==CARSIM)
-		printf("simfile: %s\n", set_simfile);
 	printf("speed:    Connect speed: %d\n", set_speed);
 	printf("display:  %s units\n", set_display?"english":"metric");
 	printf("testerid: Source ID to use: 0x%x\n", set_testerid);
@@ -271,47 +251,12 @@ static int cmd_set_interface(int argc, char **argv)
 				strncpy(set_subinterface, argv[2], sizeof(set_subinterface));
 			printf("interface is now %s on %s\n",
 					l0_names[set_interface_idx].longname, set_subinterface);
-			if (set_interface==VAGTOOL)
-				diag_l0_dumb_setflags(1);
-			else
-				diag_l0_dumb_setflags(0);	//not strictly correct usage, but will do for hack.
 		}
 	} else {
 		printf("interface: using %s on %s\n",
 			l0_names[set_interface_idx].longname, set_subinterface);
 	}
 	return (CMD_OK);
-}
-
-
-//Update simfile name to be used.
-//Current behaviour : updates the simfile even if the interface isn't set to CARSIM.
-static int cmd_set_simfile(int argc, char **argv)
-{
-	if (argc > 1) {
-		if (strcmp(argv[1], "?") == 0) {
-			printf("Simulation file: with CARSIM interface, this file contains\n"
-			"message bytes to be transferred between host and ECU.\n"
-			"Defaults to " DB_FILE "\n");
-			return CMD_OK;
-		}
-
-		if (set_simfile)
-			free(set_simfile);		//free old simfile
-		if (diag_calloc(&set_simfile, strlen(argv[1])+1))
-			return CMD_FAILED;
-		strcpy(set_simfile, argv[1]);
-		diag_l0_sim_setfile(set_simfile);
-		printf("Simulation file: now using %s\n", set_simfile);
-
-		if (set_interface!=CARSIM) {
-			printf("Note: simfile only needed with CARSIM interface.\n");
-		}
-	} else {
-		//no arguments
-		printf("Simulation file: using %s\n", set_simfile);
-	}
-	return CMD_OK;
 }
 
 static int

@@ -188,6 +188,10 @@ ssize_t diag_tty_write(struct diag_l0_device *dl0d,
 
 int diag_tty_break(struct diag_l0_device *dl0d, const int);
 
+ssize_t
+diag_tty_slow_write(struct diag_l0_device *dl0d,
+					const void *buf, const size_t count);
+
 #if defined(__cplusplus)
 }
 #endif

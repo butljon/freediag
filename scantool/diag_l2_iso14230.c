@@ -78,6 +78,83 @@ struct diag_l2_14230
 /*
  * Useful internal routines
  */
+void decode_value(struct diag_msg *tmsg, int i) {
+
+	int j;
+	uint8_t displayBit, value;
+	double temp =0;
+	/* decoding according to http://www.blafusel.de/obd/obd2_kw1281.html */
+	switch(tmsg->data[i]) {
+		case 0x01:
+			printf("%f rpm\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.2));
+			break;
+		case 0x02:
+			printf("Absoulte (throttle) position: %f \%\n",((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+			break;
+		case 0x03:
+			printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+			break;
+		case 0x04:
+			printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
+			break;
+		case 0x05:
+			printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
+			break;
+		case 0x06:
+		case 0x15:
+		case 0x16:
+			printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
+			break;
+		case 0x07:
+			printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+			break;
+		case 0x08:
+			printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
+			break;
+		case 0x09:
+			printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
+			break;
+		case 0x0a:
+			printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
+			break;
+		case 0x0B:
+			printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
+			break;
+		case 0x0c:
+			printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
+			break;
+		case 0x0d:
+			printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
+			break;
+		case 0x0e:
+			printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
+			break;
+		case 0x0F:
+			printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+			break;
+		case 0x10:
+			printf("8 bit block: <");
+			value = tmsg->data[i+2];
+			for(j=0; j<8; j++) {
+				printf("%d", displayBit = (value & 0x80) ? 1 : 0);
+				value = value << 1;
+			}
+			printf(">\n");
+			break;
+		case 0x17:
+			printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
+			break;
+		case 0x21:
+			printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
+			break;
+		default:
+			printf("Don't know that unit, please add here!\n");
+			break;
+	}
+
+	return;
+
+}
 
 static target_type
 Iso14230ToVAG(target_type in)
