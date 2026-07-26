@@ -73,8 +73,7 @@ libdiag_a_AR = $(AR) $(ARFLAGS)
 libdiag_a_LIBADD =
 am_libdiag_a_OBJECTS = diag_config.$(OBJEXT) diag_l0_se.$(OBJEXT) \
 	diag_l0_me.$(OBJEXT) diag_l0_vw.$(OBJEXT) diag_l0_br.$(OBJEXT) \
-	diag_l0_elm.$(OBJEXT) diag_l0_sim.$(OBJEXT) \
-	diag_l0_dumb.$(OBJEXT) diag_l0_ftdi.$(OBJEXT) \
+	diag_l0_elm.$(OBJEXT) diag_l0_dumb.$(OBJEXT) diag_l0_ftdi.$(OBJEXT) \
 	diag_tty.$(OBJEXT) diag_l1.$(OBJEXT) diag_l2.$(OBJEXT) \
 	diag_l2_raw.$(OBJEXT) \
 	diag_l2_iso9141.$(OBJEXT) diag_l2_iso9141.$(OBJEXT) \
@@ -234,7 +233,7 @@ noinst_LIBRARIES = libdiag.a libdyno.a
 
 #libdiag.a.: diag_config.c
 libdiag_a_SOURCES = diag_config.c \
-	diag_l0_se.c diag_l0_me.c diag_l0_vw.c diag_l0_br.c diag_l0_elm.c diag_l0_sim.c\
+	diag_l0_se.c diag_l0_me.c diag_l0_vw.c diag_l0_br.c diag_l0_elm.c\
 	diag_l0_dumb.c diag_l0_ftdi.c\
 	diag_tty.c \
 	diag_l1.c \
@@ -362,7 +361,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l0_ftdi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l0_me.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l0_se.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l0_sim.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l0_vw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l2.Po@am__quote@

@@ -63,8 +63,6 @@ enum l0_nameindex set_interface;	//hw interface to use
 
 char set_subinterface[SUBINTERFACE_MAX];		/* and sub-interface ID */
 
-extern void diag_l0_sim_setfile(char * fname);
-
 /*
  * XXX All commands should probably have optional "init" hooks.
  */
