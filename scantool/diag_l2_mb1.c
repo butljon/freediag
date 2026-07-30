@@ -447,7 +447,6 @@ diag_l2_proto_mb1_timeout(struct diag_l2_conn *d_l2_conn)
 static const struct diag_l2_proto diag_l2_proto_mb1 = {
 	DIAG_L2_PROT_MB1, DIAG_L2_FLAG_FRAMED | DIAG_L2_FLAG_DATA_ONLY
 	| DIAG_L2_FLAG_KEEPALIVE | DIAG_L2_FLAG_DOESCKSUM,
-	diag_l2_proto_mb1_startcomms,
 	diag_l2_proto_raw_stopcomms,
 	diag_l2_proto_mb1_send,
 	diag_l2_proto_mb1_recv,

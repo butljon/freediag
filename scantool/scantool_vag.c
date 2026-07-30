@@ -108,19 +108,6 @@ const struct vw_id_info vw_ids[] = {
 };
 
 /*
- * KW1281 init
- */
-int do_l2_kw1281_start(int destaddr) {
-
-	set_L1protocol = PROTOCOL_ISO9141;
-	set_L2protocol = DIAG_L2_PROT_KW1281;
-	set_speed = 9600;
-
-	return do_l2_generic_start();
-
-}
-
-/*
  * (VAG) KWP20k init
  */
 int do_l2_kwp20k_start(int init_type) {
@@ -183,7 +170,6 @@ int do_l2_kwp20k_start(int init_type) {
 
 	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-// 	rv =diag_l2_recv(global_l2_conn, 1000, NULL, NULL);
 	
 	msg.len = 2;
 
@@ -208,16 +194,10 @@ int do_l2_kwp20k_start(int init_type) {
 
 	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
 	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-// 	rv =diag_l2_recv(global_l2_conn, 1000, NULL, NULL);
 	
 	return 0;
 
 }
-
-const struct protocol protocols_vag[] = {
-   	{"KW1281", do_l2_kw1281_start, 0x01, PROTOCOL_ISO9141, DIAG_L2_TYPE_SLOWINIT},
-	{"KWP2000", do_l2_kwp20k_start, DIAG_L2_TYPE_SLOWINIT, PROTOCOL_ISO14230, DIAG_L2_TYPE_SLOWINIT},
-};
 
 static int cmd_vag_help(int argc, char **argv) {
 
@@ -228,7 +208,6 @@ static int cmd_vag_help(int argc, char **argv) {
 int cmd_vag_connect(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
 
 	int rv = 0, connected = 0;
-	const struct protocol *p;
 
 	if (global_state >= STATE_CONNECTED)
 	{
@@ -237,7 +216,7 @@ int cmd_vag_connect(int argc __attribute__((unused)), char **argv __attribute__(
 	}
 
 	if(argc == 2)
-	    set_destaddr = atoi( argv[1]);
+	    set_destaddr = atoi(argv[1]);
 	else {
 	    if(argc == 1)
 	        set_destaddr = store_set_destaddr;
@@ -245,41 +224,19 @@ int cmd_vag_connect(int argc __attribute__((unused)), char **argv __attribute__(
 		    fprintf(stderr, FLFMT "Connect must be called with one optional argument <ECUId>\n", FL);
 		    return CMD_FAILED;
 	    }
-	}	    
-
-	p=protocols_vag;
-	if (set_L1protocol == 64)
-		p++;
-
-	if(set_L1protocol == 32 || set_L1protocol == 64) {
-		fprintf(stderr,"Trying %s:\n", p->desc);
-		rv = p->start(p->flags);
-		if (rv == 0) {
-			global_conmode = p->conmode;
-			global_protocol = p->protoID;
-			connected = 1;
-			global_state = STATE_CONNECTED;
-			printf("%s connected to ECU %d.\n", p->desc, set_destaddr);
-		} else {
-			fprintf(stderr, FLFMT "%s failed to connect to ECU %d\n", FL, p->desc, set_destaddr);
-			return CMD_FAILED;
-		}
 	}
-	
-	for (p = protocols_vag; !connected && p < &protocols_vag[ARRAY_SIZE(protocols_vag)]; p++) {
-		fprintf(stderr,"Trying %s:\n", p->desc);
-		rv = p->start(p->flags);
-		if (rv == 0) {
-			global_conmode = p->conmode;
-			global_protocol = p->protoID;
-			connected = 1;
-			global_state = STATE_CONNECTED;
-			printf("%s connected to ECU %d.\n", p->desc, set_destaddr);
-		} else {
-			fprintf(stderr, FLFMT "%s failed to connect to ECU %d\n", FL, p->desc, set_destaddr);
-			/* wait 3 secs before attempting next protocol */
- 			diag_os_millisleep(ISO_14230_TIM_MAX_P3);
-		}
+
+	rv = do_l2_generic_start();
+	if (rv == 0) {
+	//xxx	global_conmode = p->conmode;
+	//xxx	global_protocol = p->protoID;
+		connected = 1;
+		global_state = STATE_CONNECTED;
+		printf("Connected to ECU %d.\n", set_destaddr);
+	} else {
+		fprintf(stderr, FLFMT "failed to connect to ECU %d\n", FL, set_destaddr);
+		/* wait 3 secs before attempting next protocol */
+ 		diag_os_millisleep(ISO_14230_TIM_MAX_P3);
 	}
 
 	if (rv<0)

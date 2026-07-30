@@ -482,13 +482,9 @@ cmd_watch(int argc, char **argv)
 		return CMD_FAILED;
 	}
 	if (rawmode)
-		d_l2_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_PROT_RAW,
-			0, set_speed, 
-			set_destaddr, 
-			set_testerid);
+		d_l2_conn = diag_l2_StartCommunications(dl0d, 0, set_speed, set_destaddr, set_testerid);
 	else
-		d_l2_conn = diag_l2_StartCommunications(dl0d, set_L2protocol,
-			DIAG_L2_TYPE_MONINIT, set_speed, set_destaddr, set_testerid);
+		d_l2_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_TYPE_MONINIT, set_speed, set_destaddr, set_testerid);
 
 	if (d_l2_conn == 0) {
 		printf("Failed to connect to hardware in monitor mode\n");

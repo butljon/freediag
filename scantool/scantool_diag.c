@@ -56,12 +56,9 @@ const struct cmd_tbl_entry diag_cmd_table[] =
 {
 	{ "help", "help [command]", "Gives help for a command",
 		cmd_diag_help, 0, NULL},
-
 	{ "connect", "connect", "Connect to ECU", cmd_diag_connect, 0, NULL},
-
 	{ "disconnect", "disconnect", "Disconnect from ECU", cmd_diag_disconnect,
 		0, NULL},
-
 	{ "sendreq", "sendreq data0 data1 data2 ...", "Send a command to the ECU and print response",
 		cmd_diag_sendreq, 0, NULL},
 	{ "sr", "sendreq data0 data1 data2 ...", "Send a command to the ECU and print response",
@@ -74,7 +71,6 @@ const struct cmd_tbl_entry diag_cmd_table[] =
 
 	{ "addl3", "addl3 protocol", "Add [start] a L3 protocol",
 		cmd_diag_addl3, 0, NULL},
-
 	{ "probe", "probe start_addr stop_addr", "Scan bus using ISO9141 5 baud init [slow!]", cmd_diag_probe, 0, NULL},
 	{ "fastprobe", "fastprobe start_addr stop_addr [func]", "Scan bus using ISO14230 fast init with physical or functional addressing", cmd_diag_fastprobe, 0, NULL},
 	{ "up", "up", "Return to previous menu level",
@@ -83,7 +79,6 @@ const struct cmd_tbl_entry diag_cmd_table[] =
 		cmd_up, FLAG_HIDDEN, NULL},
 	{ "exit", "exit", "Exit program",
 		cmd_exit, 0, NULL},
-
 	{ NULL, NULL, NULL, NULL, 0, NULL}
 };
 
@@ -227,14 +222,10 @@ cmd_diag_probe_common(int argc, char **argv, int fastflag)
 
 
 		if (fastflag)
-			d_conn = diag_l2_StartCommunications(dl0d,
-				DIAG_L2_PROT_ISO14230,
-				DIAG_L2_TYPE_FASTINIT | funcmode,
+			d_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_TYPE_FASTINIT | funcmode,
 				set_speed, i, set_testerid);
 		else
-			d_conn = diag_l2_StartCommunications(dl0d,
-				DIAG_L2_PROT_ISO9141,
-				DIAG_L2_TYPE_SLOWINIT,
+			d_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_TYPE_SLOWINIT,
 				set_speed, i, set_testerid);
 
 		if (d_conn != NULL)

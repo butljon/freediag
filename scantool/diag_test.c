@@ -164,11 +164,9 @@ do_l2_raw_test(int funcaddr, target_type destecu, int inittype)
 #define DO_ISO 1
 
 #if DO_ISO
-	d_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_PROT_ISO14230, flags,
-		10400, destecu, 0xF1);
+	d_conn = diag_l2_StartCommunications(dl0d, flags, 10400, destecu, 0xF1);
 #else
-	d_conn = diag_l2_StartCommunications(dl0d, DIAG_L2_PROT_RAW, flags,
-		10400, destecu, 0xF1);
+	d_conn = diag_l2_StartCommunications(dl0d, flags, 10400, destecu, 0xF1);
 #endif
 
 

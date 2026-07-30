@@ -349,8 +349,8 @@ int diag_l2_init(void);
 struct diag_l0_device * diag_l2_open(const char *device_name, const char *subinterface, int L1protocol);
 int diag_l2_close(struct diag_l0_device *);
 
-struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *, int L2protocol,
-	uint32_t type, int bitrate, target_type target, source_type source );
+struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *, uint32_t type, int bitrate,
+	target_type target, source_type source);
 
 int diag_l2_StopCommunications(struct diag_l2_conn *);
 
@@ -378,8 +378,6 @@ struct diag_l2_proto {
 	int	diag_l2_flags;
 
 	/* Individual L2 routines, see description of interface in diag_l2.h */
-	int (*diag_l2_proto_startcomms)(struct diag_l2_conn*,
-		flag_type, int, target_type, source_type);
 	int (*diag_l2_proto_stopcomms)(struct diag_l2_conn*);
 	int (*diag_l2_proto_send)(struct diag_l2_conn*, struct diag_msg*);
 	int (*diag_l2_proto_recv)(struct diag_l2_conn *d_l2_conn,
@@ -392,6 +390,19 @@ struct diag_l2_proto {
 
 int diag_l2_add_protocol(const struct diag_l2_proto *l2proto);
 
+struct diag_l2_kw1281
+{
+	uint8_t srcaddr;	// Src address used, normally 0xF1 (tester)
+	uint8_t target;	// Target address used, normally 0x33 (ISO9141)
+	uint8_t seq_nr;	/* Sequence number */
+	uint8_t master;	/* Master flag, 1 = us, 0 = ECU */
+
+
+	uint8_t rxbuf[MAXRBUF];	/* Receive buffer, for building message in */
+	int rxoffset;		/* Offset to write into buffer */
+	uint8_t state;
+	struct monitor_type *monitor;
+};
 
 #if defined(__cplusplus)
 }

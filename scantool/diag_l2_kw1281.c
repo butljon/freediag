@@ -42,7 +42,6 @@
 #include "diag_l2_raw.h"
 #include "diag_vag.h"
 #include "diag_l2_iso9141.h"
-
 #include "diag_l2_kw1281.h" /* prototypes for this file */
 
 /*
@@ -52,20 +51,6 @@ struct monitor_type
 {
 	uint8_t value;
 	struct monitor_type *next;
-};
-
-struct diag_l2_kw1281
-{
-	uint8_t srcaddr;	// Src address used, normally 0xF1 (tester)
-	uint8_t target;	// Target address used, normally 0x33 (ISO9141)
-	uint8_t seq_nr;	/* Sequence number */
-	uint8_t master;	/* Master flag, 1 = us, 0 = ECU */
-
-
-	uint8_t rxbuf[MAXRBUF];	/* Receive buffer, for building message in */
-	int rxoffset;		/* Offset to write into buffer */
-	uint8_t state;
-	struct monitor_type *monitor;
 };
 
 #define STATE_CLOSED	  0	/* Established comms */
@@ -693,153 +678,6 @@ static int diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databy
 }
 /* External interface */
 
-/*
- * The complex initialisation routine for ISOvag, which should support
- * 2 types of initialisation 5-BAUD and FAST (only 5-BAUD implemented here)
- * and functional and physical addressing. The ISOvag spec describes
- * CARB initialisation which is done in the ISO9141 code
- */
-static int diag_l2_proto_kw1281_startcomms(struct diag_l2_conn *d_l2_conn, flag_type flags __attribute__((unused)),
-		int bitrate, target_type target, source_type source __attribute__((unused))) {
-
-	struct diag_serial_settings set;
-	struct diag_l2_node *node;
-	uint8_t cbuf[MAXRBUF];
-	int rv = 0, i, wait_time;
-
-	struct diag_l1_initbus_args in;
-	struct diag_l2_kw1281 *dp;
-
-	if(diag_calloc(&dp, 1)) {
-	    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
-	    return DIAG_ERR_NOMEM;
-	}
-
-	d_l2_conn->diag_l2_proto_data = dp;
-	dp->monitor = NULL;
-
-	/*
-	 * diag_l2_p3max is used later for firing stay-alive timeouts, see diag_l2.c, and
-	 * for monitoring in KW1281. For KW1281, the full diag_l2_p3max * 2/3
-	 * (= 10/3 secs) appears too long between stay-alive pings, so
-	 * increase the ping frequency:
-	 */
-	d_l2_conn->diag_l2_p3max = KW_1281_TIM_MAX_P3;
-
-	/*
-	 * The ISO_14230_TIM_MIN_P3 (=55) value for diag_l2_p3max appeared too short for
-	 * my (presumably slow!) KW1281 door lock 0x46 ECU, so increase this to 100.
-	 * This seemed to have no side effects on interaction with any other ECUs.
-	 */
-	
-	d_l2_conn->diag_l2_p3min = KW_1281_TIM_MIN_P3;
-	/*
-	 * going to use dp->master later with timeout:
-	 * dp->master = 1 means "we are busy with the line", thus
-	 * only do a timeout if(!dp->master)
-	 */
-	dp->master = 1;
-
-	/*
-	 * Override "set speed" value; we will probe with 9600 baud
-	 */
-	set.speed = 9600;
-	set.databits = diag_databits_8;
-	set.stopbits = diag_stopbits_1;
-	set.parflag = diag_par_n;
-
-	/* Set the speed as shown */
-	rv = diag_l1_setspeed( d_l2_conn->diag_link->diag_l2_dl0d, &set);
-	if(rv < 0) {
-	    fprintf(stderr, FLFMT "Could not set speed %d\n", FL, set.speed);
-	    return rv;
-	}
-
-	/* Flush unread input, then wait for idle bus. */
-	(void)diag_tty_iflush(d_l2_conn->diag_link->diag_l2_dl0d);
-	diag_os_millisleep(W5min);
-
-	/* Now do 5 baud init of supplied address */
-	in.type = DIAG_L1_INITBUS_5BAUD;
-	in.addr = target;
-	rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
-	if(rv < 0) {
-	    fprintf(stderr, FLFMT "ioctl INITBUS failed\n", FL);
-	    return rv;
-	}
-
-	/* Key bytes are in 7-Odd-1, read as 8N1 and ignore parity */
-	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, W2max);
-	if(rv < 0) {
-	    fprintf(stderr, FLFMT "Failed to receive 1st key mode byte\n", FL);
-	    return rv;
-	}
-
-	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[1], 1, W3max);
-	if(rv < 0) {
-	    fprintf(stderr, FLFMT "Failed to receive 2nd key mode byte\n", FL);
-	    return rv;
-	}
-
-	/* Note down the key bytes */
-	d_l2_conn->diag_l2_kb1 = cbuf[0] & 0x7f;
-	d_l2_conn->diag_l2_kb2 = cbuf[1] & 0x7f;
-
-	if((d_l2_conn->diag_link->diag_l2_l1flags & DIAG_L1_DOESSLOWINIT) == 0) {
-		diag_os_millisleep(W4min);
-	  	/*
-		 * Now transmit KB2 inverted
-		 */
-		cbuf[0] = ~cbuf[1];
-		rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf, 1, d_l2_conn->diag_l2_p4min);
-		if(rv < 0) {
-	  	    fprintf(stderr, FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
-	  	    return rv;
-		}
-	}
-        /*
-	 * Protocol specific things: this now a hybrid of ISO9141'ish stuff
-	 * for KW1281 and switching to ISO14230 for KWP20k.  We play a
-	 * similar trick to what we did with the speed in diag_l0_ftdi.c
-	 * where we switch the d_l2_conn->l2proto to ISO14230 if necessary.
-	 */
-	if(d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
-        /* (VAG) KW1281 */
-		printf("VAG KW1281 protocol\n");
-	/*
-	 * Now receive the first 3 messages
-	 * which show ECU versions etc
-	 */
-
-		diag_os_millisleep(W4min);
-	        /* obtain first messages from ECU */
-		rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
-		if(rv < 0) {
-	  	    fprintf(stderr, FLFMT "Receipt of initial blocks from ECU %d failed\n", FL, target);
-	  	    return rv;
-		}
-
-		dp->state = STATE_ESTABLISHED;
-	} else {
-		if(d_l2_conn->diag_l2_kb2 == 0x0f) {
-	/* (VAG) KWP20k */
-		/* perform some KWP20k consistency checks, see ISO 14230 */
-		    if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1
-		    		& (1<<4))) {
-			    fprintf(stderr, FLFMT "Wierd KWP20k protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
-			    		FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
-			    return -1;
-		}
-		fprintf(stderr, FLFMT "Looks like (VAG) KWP%d protocol\n", FL, 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
-	}
-	fprintf(stderr, FLFMT "Failed to connect with KW1281\n", FL);
-	    return -1;
-	}
-	dp->master = 0;
-
-	return 0;
-
-}
 
 /*
  * Send the data
@@ -1121,7 +959,6 @@ static void diag_l2_proto_kw1281_timeout(struct diag_l2_conn *d_l2_conn) {
 
 static const struct diag_l2_proto diag_l2_proto_kw1281 = {
 	DIAG_L2_PROT_KW1281, DIAG_L2_FLAG_FRAMED | DIAG_L2_FLAG_DOESCKSUM,
-	diag_l2_proto_kw1281_startcomms,
 	diag_l2_proto_kw1281_stopcomms,
 	diag_l2_proto_kw1281_send,
 	diag_l2_proto_kw1281_recv,

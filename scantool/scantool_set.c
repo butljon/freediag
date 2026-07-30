@@ -55,7 +55,7 @@ const char *	set_vehicle;	/* Vehicle */
 const char *	set_ecu;	/* ECU name */
 
 //const char  *	set_interface;	/* H/w interface to use */
-#define DEFAULT_INTERFACE 5	//index into l0_names below
+#define DEFAULT_INTERFACE 6	//index into l0_names below
 const struct l0_name l0_names[] = { {"MET16", MET16}, {"SE9141", SE9141}, {"VAGTOOL", VAGTOOL},
 			{"BR1", BR1}, {"ELM", ELM}, {"DUMB", DUMB}, {"FTDI", FTDI}, NULL};
 

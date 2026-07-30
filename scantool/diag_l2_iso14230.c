@@ -577,7 +577,7 @@ diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 			} else {
 				tmsg->fmt = 0;
 			}
-			tmsg->fmt |= DIAG_FMT_FRAMED | DIAG_FMT_DATAONLY ;
+			tmsg->fmt |= DIAG_FMT_FRAMED | DIAG_FMT_DATAONLY;
 			tmsg->fmt |= DIAG_FMT_CKSUMMED;
 
 			if ((l1flags & DIAG_L1_STRIPSL2CKSUM) == 0) {
@@ -1232,7 +1232,6 @@ diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn)
 static const struct diag_l2_proto diag_l2_proto_14230 = {
 	DIAG_L2_PROT_ISO14230, DIAG_L2_FLAG_FRAMED | DIAG_L2_FLAG_DATA_ONLY
 	| DIAG_L2_FLAG_KEEPALIVE | DIAG_L2_FLAG_DOESCKSUM,
-	diag_l2_proto_14230_startcomms,
 	diag_l2_proto_14230_stopcomms,
 	diag_l2_proto_14230_send,
 	diag_l2_proto_14230_recv,

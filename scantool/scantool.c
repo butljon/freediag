@@ -735,8 +735,7 @@ struct diag_l2_conn * do_l2_common_start(int L1protocol, int L2protocol,
 
 	/* Now do the Layer 2 startcommunications */
 
-	d_conn = diag_l2_StartCommunications(dl0d, L2protocol, type,
-		bitrate, target, source);
+	d_conn = diag_l2_StartCommunications(dl0d, type, bitrate, target, source);
 
 	if (d_conn == NULL) {
 		diag_l2_close(dl0d);
@@ -890,8 +889,7 @@ do_l2_j1850_start(int l1_type)
  * Generic init, using parameters set by user
  * called by cmd_diag_connect;
  */
-int
-do_l2_generic_start(void)
+int do_l2_generic_start(void)
 {
 	struct diag_l2_conn *d_conn;
 	struct diag_l0_device *dl0d;
@@ -920,10 +918,8 @@ do_l2_generic_start(void)
 	else
 		flags = 0;
 
-	flags |= (set_initmode & DIAG_L2_TYPE_INITMASK) ;
-
-	d_conn = diag_l2_StartCommunications(dl0d, set_L2protocol,
-		flags, set_speed, set_destaddr, set_testerid);
+	flags |= (set_initmode & DIAG_L2_TYPE_INITMASK);
+	d_conn = diag_l2_StartCommunications(dl0d, flags, set_speed, set_destaddr, set_testerid);
 
 	if (d_conn == NULL) {
 	rv=diag_geterr();
@@ -932,7 +928,6 @@ do_l2_generic_start(void)
 	}
 
 	/* Connected ! */
-	
 	global_l2_conn = d_conn;
 	global_l2_dl0d = dl0d;	/* Saved for close */
 
@@ -1868,13 +1863,7 @@ const struct pid *get_pid ( int i )
 /*
  * Main
  */
-#ifdef WIN32
-int
-main(int argc, char **argv)
-#else
-int
-main(int argc __attribute__((unused)), char **argv)
-#endif
+int main(int argc __attribute__((unused)), char **argv)
 {
 	int user_interface = 1 ;
 	int i ;

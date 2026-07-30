@@ -38,17 +38,14 @@
 #include "diag_l1.h"
 #include "diag_tty.h"
 #include "diag_err.h"
-
 #include "diag_l2.h"
-
-/* */
-
-CVSID("$Id: diag_l2.c,v 1.9 2011/08/07 02:17:46 fenugrec Exp $");
+#include "diag_vag.h"
+#include "diag_l2_iso9141.h"
 
 int diag_l2_debug;
 
 /*
- * List of supported L2 protcols, added with "diag_l2_add_protocol".
+ * List of supported L2 protocols, added with "diag_l2_add_protocol".
  */
 
 struct diag_l2_node {
@@ -417,17 +414,186 @@ diag_l2_close(struct diag_l0_device *dl0d)
 	return 0;
 }
 
+void diag_l2_assign_l2_protocol(struct diag_l2_conn *d_l2_conn, int l2protocol) {
+	/* Look up the protocol we want to use */
+	struct diag_l2_node *node;
+
+	for (node = l2proto_list; node != NULL; node = node->next) {
+		if (node->l2proto->diag_l2_protocol == l2protocol) {
+			d_l2_conn->l2proto = node->l2proto;
+			break;
+		}
+	}
+
+	if (d_l2_conn->l2proto == 0) {
+		fprintf(stderr, FLFMT "Protocol not installed.\n", FL);
+		return;
+	}
+
+}
+
+/*
+ * The complex initialisation routine for ISOvag, which should support
+ * 2 types of initialisation 5-BAUD and FAST (only 5-BAUD implemented here)
+ * and functional and physical addressing. The ISOvag spec describes
+ * CARB initialisation which is done in the ISO9141 code
+ */
+static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_type flags __attribute__((unused)),
+		int bitrate, target_type target, source_type source __attribute__((unused))) {
+
+	struct diag_serial_settings set;
+	struct diag_l2_node *node;
+	uint8_t cbuf[MAXRBUF];
+	int rv = 0, i, wait_time;
+
+	struct diag_l1_initbus_args in;
+	struct diag_l2_kw1281 *dp;
+
+	if(diag_calloc(&dp, 1)) {
+	    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
+	    return DIAG_ERR_NOMEM;
+	}
+
+	d_l2_conn->diag_l2_proto_data = dp;
+	dp->monitor = NULL;
+
+	/*
+	 * diag_l2_p3max is used later for firing stay-alive timeouts, see diag_l2.c, and
+	 * for monitoring in KW1281. For KW1281, the full diag_l2_p3max * 2/3
+	 * (= 10/3 secs) appears too long between stay-alive pings, so
+	 * increase the ping frequency:
+	 */
+	d_l2_conn->diag_l2_p3max = KW_1281_TIM_MAX_P3;
+
+	/*
+	 * The ISO_14230_TIM_MIN_P3 (=55) value for diag_l2_p3max appeared too short for
+	 * my (presumably slow!) KW1281 door lock 0x46 ECU, so increase this to 100.
+	 * This seemed to have no side effects on interaction with any other ECUs.
+	 */
+
+	d_l2_conn->diag_l2_p3min = KW_1281_TIM_MIN_P3;
+	/*
+	 * going to use dp->master later with timeout:
+	 * dp->master = 1 means "we are busy with the line", thus
+	 * only do a timeout if(!dp->master)
+	 */
+	dp->master = 1;
+
+	/*
+	 * Override "set speed" value; we will probe with 9600 baud
+	 */
+	set.speed = 9600;
+	set.databits = diag_databits_8;
+	set.stopbits = diag_stopbits_1;
+	set.parflag = diag_par_n;
+
+	/* Set the speed as shown */
+	rv = diag_l1_setspeed(d_l2_conn->diag_link->diag_l2_dl0d, &set);
+	if(rv < 0) {
+	    fprintf(stderr, FLFMT "Could not set speed %d\n", FL, set.speed);
+	    return rv;
+	}
+
+	/* Flush unread input, then wait for idle bus. */
+	(void)diag_tty_iflush(d_l2_conn->diag_link->diag_l2_dl0d);
+	diag_os_millisleep(W5min);
+
+	/* Now do 5 baud init of supplied address */
+	in.type = DIAG_L1_INITBUS_5BAUD;
+	in.addr = target;
+
+	rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
+	if(rv < 0) {
+	    fprintf(stderr, FLFMT "ioctl INITBUS failed\n", FL);
+	    return rv;
+	}
+
+	/* Key bytes are in 7-Odd-1, read as 8N1 and ignore parity */
+	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, W2max);
+	if(rv < 0) {
+	    fprintf(stderr, FLFMT "Failed to receive 1st key mode byte\n", FL);
+	    return rv;
+	}
+
+	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[1], 1, W3max);
+	if(rv < 0) {
+	    fprintf(stderr, FLFMT "Failed to receive 2nd key mode byte\n", FL);
+	    return rv;
+	}
+
+	/* Note down the key bytes */
+	d_l2_conn->diag_l2_kb1 = cbuf[0] & 0x7f;
+	d_l2_conn->diag_l2_kb2 = cbuf[1] & 0x7f;
+
+	if((d_l2_conn->diag_link->diag_l2_l1flags & DIAG_L1_DOESSLOWINIT) == 0) {
+		diag_os_millisleep(W4min);
+	  	/*
+		 * Now transmit KB2 inverted
+		 */
+		cbuf[0] = ~cbuf[1];
+		rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf, 1, d_l2_conn->diag_l2_p4min);
+		if(rv < 0) {
+	  	    fprintf(stderr, FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
+	  	    return rv;
+		}
+	}
+        /*
+	 * Protocol specific things: this now a hybrid of ISO9141'ish stuff
+	 * for KW1281 and switching to ISO14230 for KWP2xxx.  We play a
+	 * similar trick to what we did with the speed in diag_l0_ftdi.c
+	 * where we switch the d_l2_conn->l2proto to ISO14230 if necessary.
+	 */
+	if(d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
+        /* (VAG) KW1281 */
+		printf("VAG KW1281 protocol\n");
+		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_KW1281);
+	/*
+	 * Now receive the first 3 messages
+	 * which show ECU versions etc
+	 */
+
+		diag_os_millisleep(W4min);
+	        /* obtain first messages from ECU */
+		rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
+		if(rv < 0) {
+	  	    fprintf(stderr, FLFMT "Receipt of initial blocks from ECU %d failed\n", FL, target);
+	  	    return rv;
+		}
+
+		dp->state = STATE_ESTABLISHED;
+	}
+
+	if(d_l2_conn->diag_l2_kb2 == 0x0f) {
+	/* (VAG) KWP2xxx */
+		/* perform some KWP2xxx consistency checks, see ISO 14230 */
+		    if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
+			    fprintf(stderr, FLFMT "Wierd KWP2xxx protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
+			    		FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
+			    return -1;
+		}
+		printf("VAG KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
+		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_ISO14230);
+	}
+
+	if((d_l2_conn->diag_l2_kb1 != 0x01 || d_l2_conn->diag_l2_kb2 != 0x0a) && d_l2_conn->diag_l2_kb2 != 0x0f) {
+		fprintf(stderr, FLFMT "Failed to connect with KW1281 or KWP2xxx\n", FL);
+			return -1;
+	}
+	dp->master = 0;
+
+	return 0;
+
+}
+
 /*
  * startCommunication routine, establishes a connection to
  * an ECU by sending fast/slow start (or whatever the protocol is),
  * and sets all the timer parameters etc etc
  */
-struct diag_l2_conn *
-diag_l2_StartCommunications(struct diag_l0_device *dl0d, int L2protocol, uint32_t type,
+struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, uint32_t type,
 	int bitrate, target_type target, source_type source)
 {
 	struct diag_l2_conn	*d_l2_conn;
-	struct diag_l2_node *node;
 
 	struct diag_l2_link *dl2l;
 	int rv;
@@ -436,9 +602,8 @@ diag_l2_StartCommunications(struct diag_l0_device *dl0d, int L2protocol, uint32_
 
 	if (diag_l2_debug & DIAG_DEBUG_OPEN)
 		fprintf(stderr,
-			FLFMT "diag_l2_startCommunications dl0d %p L2proto %d type %x baud %d target 0x%x src 0x%x called\n",
-			FL, dl0d, L2protocol, type ,
-			bitrate, target&0xff, source&0xff);
+			FLFMT "diag_l2_startCommunications dl0d %p type %x baud %d target 0x%x src 0x%x called\n",
+			FL, dl0d, type, bitrate, target&0xff, source&0xff);
 
 	/*
 	 * Check connection doesn't exist already, if it does, then use it
@@ -475,24 +640,6 @@ diag_l2_StartCommunications(struct diag_l0_device *dl0d, int L2protocol, uint32_
 
 	/* Link to the L1 device info that we keep (name, type, flags, dl0d) */
 	d_l2_conn->diag_link = dl2l;
-
-	/* Look up the protocol we want to use */
-
-	d_l2_conn->l2proto = 0;
-
-	for (node = l2proto_list; node != NULL; node = node->next) {
-		if (node->l2proto->diag_l2_protocol == L2protocol) {
-			d_l2_conn->l2proto = node->l2proto;
-			break;
-		}
-	}
-
-	if (d_l2_conn->l2proto == 0) {
-		fprintf(stderr,
-			FLFMT "Protocol %d not installed.\n", FL, L2protocol);
-		return NULL;
-	}
-
 	d_l2_conn->diag_l2_type = type ;
 	d_l2_conn->diag_l2_srcaddr = source ;
 	d_l2_conn->diag_l2_destaddr = target ;
@@ -517,9 +664,7 @@ diag_l2_StartCommunications(struct diag_l0_device *dl0d, int L2protocol, uint32_
 	/* Now do protocol version of StartCommunications */
 
 	flags = type&0xffff;
-
-	rv = d_l2_conn->l2proto->diag_l2_proto_startcomms(d_l2_conn,
-	flags, bitrate, target, source);
+	rv = diag_l2_proto_vag_startcomms(d_l2_conn, flags, bitrate, target, source);
 
 	if (rv < 0)
 	{
@@ -546,8 +691,6 @@ diag_l2_StartCommunications(struct diag_l0_device *dl0d, int L2protocol, uint32_
 		/* And attach connection info to our main list */
 		d_l2_conn->next = diag_l2_connections ;
 		diag_l2_connections = d_l2_conn ;
-
-/* XXX insert in second linked list */
 
 		diag_l2_conbyid[target] = d_l2_conn;
 
