@@ -53,8 +53,7 @@ struct diag_l2_node {
 	struct diag_l2_node *next;
 } *l2proto_list;
 
-int
-diag_l2_add_protocol(const struct diag_l2_proto *l2proto) {
+int diag_l2_add_protocol(const struct diag_l2_proto *l2proto) {
 	int rv;
 
 	struct diag_l2_node *last_node, *new_node;
@@ -117,9 +116,7 @@ static struct diag_l2_link *diag_l2_links;
 /*
  * Find our link to the L1 device, by name
  */
-static struct diag_l2_link *
-diag_l2_findlink(const char *dev_name)
-{
+static struct diag_l2_link * diag_l2_findlink(const char *dev_name) {
 	struct diag_l2_link *dl2l = diag_l2_links;
 
 	while (dl2l)
@@ -134,9 +131,7 @@ diag_l2_findlink(const char *dev_name)
 /*
  * Remove a link, caller should free it
  */
-static int
-diag_l2_rmlink(struct diag_l2_link *d)
-{
+static int diag_l2_rmlink(struct diag_l2_link *d) {
 	struct diag_l2_link *dl2l, *d_l2_last;
 
 	dl2l = diag_l2_links;
@@ -164,17 +159,7 @@ diag_l2_rmlink(struct diag_l2_link *d)
  * - up to the caller to have shut it down properly first
  * diag_l2_rmconn XXX Currently not used.
  */
-#ifdef WIN32
-static int
-diag_l2_rmconn(struct diag_l2_conn *d);
-#else
-static int
-diag_l2_rmconn(struct diag_l2_conn *d) __attribute__((unused));
-#endif
-
-static int
-diag_l2_rmconn(struct diag_l2_conn *d)
-{
+static int diag_l2_rmconn(struct diag_l2_conn *d) {
 	struct diag_l2_conn	*d_l2_conn = diag_l2_connections;
 	struct diag_l2_conn	*d_l2_last_conn = NULL;
 
@@ -206,9 +191,7 @@ diag_l2_rmconn(struct diag_l2_conn *d)
  * Thus, it is now easy to eliminate "diag_l2_timer" and replace it
  * with posix timers.
  */
-void
-diag_l2_timer(void)
-{
+void diag_l2_timer(void) {
 	struct diag_l2_conn	*d_l2_conn;
 	struct timeval now;
 
@@ -241,9 +224,7 @@ diag_l2_timer(void)
 /*
  * Add a message to the message list on the L2 connection
  */
-void
-diag_l2_addmsg(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
-{
+void diag_l2_addmsg(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
 	struct diag_msg *tmsg = d_l2_conn->diag_msg;
 
 	if (d_l2_conn->diag_msg == NULL)
@@ -273,8 +254,7 @@ diag_l2_addmsg(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 /*
  * Init called to initialise local structures, and same for layers below
  */
-int diag_l2_init()
-{
+int diag_l2_init() {
 	if (diag_l2_debug & DIAG_DEBUG_INIT)
 		fprintf(stderr,FLFMT "diag_l2_init called\n", FL);
 
@@ -293,9 +273,7 @@ int diag_l2_init()
 /*
  * Close/kill a L1link
  */
-static int
-diag_l2_closelink(struct diag_l2_link **pdl2l)
-{
+static int diag_l2_closelink(struct diag_l2_link **pdl2l) {
 	if (pdl2l && *pdl2l) {
 		struct diag_l2_link *dl2l = *pdl2l;
 
@@ -330,9 +308,7 @@ diag_l2_closelink(struct diag_l2_link **pdl2l)
  * interfaces are smart and can support multiple protocols, also L2 needs
  * to know later (and asks L1)
  */
-struct diag_l0_device *
-diag_l2_open(const char *dev_name, const char *subinterface, int L1protocol)
-{
+struct diag_l0_device * diag_l2_open(const char *dev_name, const char *subinterface, int L1protocol) {
 	int rv;
 	struct diag_l0_device *dl0d;
 	struct diag_l2_link *dl2l;
@@ -401,9 +377,7 @@ diag_l2_open(const char *dev_name, const char *subinterface, int L1protocol)
  * nothing. However, all we have is the link unless a StartCommunications()
  * has been done
  */
-int
-diag_l2_close(struct diag_l0_device *dl0d)
-{
+int diag_l2_close(struct diag_l0_device *dl0d) {
 
 	if (diag_l2_debug & DIAG_DEBUG_CLOSE)
 		fprintf(stderr,FLFMT "diag_l2_close %p called\n",
@@ -591,8 +565,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
  * and sets all the timer parameters etc etc
  */
 struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, uint32_t type,
-	int bitrate, target_type target, source_type source)
-{
+	int bitrate, target_type target, source_type source) {
 	struct diag_l2_conn	*d_l2_conn;
 
 	struct diag_l2_link *dl2l;
@@ -711,9 +684,7 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
  * - some L2 protocols have an ordered mechanism to do this, others are
  * just timeout based (i.e don't send anything for 5 seconds)
  */
-int
-diag_l2_StopCommunications(struct diag_l2_conn *d_l2_conn)
-{
+int diag_l2_StopCommunications(struct diag_l2_conn *d_l2_conn) {
 	d_l2_conn->diag_l2_state = DIAG_L2_STATE_CLOSING;
 
 	/*
@@ -730,8 +701,7 @@ diag_l2_StopCommunications(struct diag_l2_conn *d_l2_conn)
  * Get the time of the last send time, and calculate expiration.
  */
 
-void
-diag_l2_sendstamp(struct diag_l2_conn *d_l2_conn) {
+void diag_l2_sendstamp(struct diag_l2_conn *d_l2_conn) {
 
 	/*
 	 * Get the current time.
@@ -758,9 +728,7 @@ diag_l2_sendstamp(struct diag_l2_conn *d_l2_conn) {
 /*
  * Send a message. This is synchronous.
  */
-int
-diag_l2_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
-{
+int diag_l2_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
 	int rv;
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
@@ -785,9 +753,7 @@ diag_l2_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
  * that message or an error indicator
  * This is synchronous and sleeps and is meant too.
  */
-struct diag_msg *
-diag_l2_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg, int *errval)
-{
+struct diag_msg * diag_l2_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg, int *errval) {
 	struct diag_msg *rv;
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
@@ -815,10 +781,8 @@ diag_l2_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg, int *errva
  *
  * Timeout is in ms
  */
-int
-diag_l2_recv(struct diag_l2_conn *d_l2_conn, int timeout, 
-	void (*callback)(void *handle, struct diag_msg *msg), void *handle)
-{
+int diag_l2_recv(struct diag_l2_conn *d_l2_conn, int timeout,
+	void (*callback)(void *handle, struct diag_msg *msg), void *handle) {
 	int rv;
 
 	if (diag_l2_debug & DIAG_DEBUG_READ)
@@ -838,8 +802,7 @@ diag_l2_recv(struct diag_l2_conn *d_l2_conn, int timeout,
  * IOCTL, for setting/asking how various layers are working - similar to
  * Unix ioctl()
  */
-int diag_l2_ioctl(struct diag_l2_conn *d_l2_conn, int cmd, void *data)
-{
+int diag_l2_ioctl(struct diag_l2_conn *d_l2_conn, int cmd, void *data) {
 	struct diag_l0_device *dl0d;
 	struct diag_serial_settings *ic;
 	int rv = 0;

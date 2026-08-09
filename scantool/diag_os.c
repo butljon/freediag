@@ -392,7 +392,7 @@ diag_os_sched(void)
 
 	/* Set real time UNIX scheduling */
 	p.sched_priority = 1;
-  	if ( sched_setscheduler(getpid(), SCHED_FIFO, &p) < 0)
+  	if (sched_setscheduler(getpid(), SCHED_FIFO, &p) < 0)
 	{
 		fprintf(stderr, FLFMT "sched_setscheduler failed: %s.\n",
 			FL, strerror(errno));
