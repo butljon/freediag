@@ -882,6 +882,7 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 	}
 
 	read(fd, &data, sizeof(unsigned long));
+	//fprintf(stderr, FLFMT "data: %x, time: %d\n", FL, data, time);
 	data >>= 8;
 	time+=(int)data;
 
@@ -894,21 +895,25 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 		rv = select ( dl0d->fd + 1,  &set, NULL, NULL, &tv ) ;
 
 		if ( rv > 0 ) {
-//		        fprintf(stderr, FLFMT "OK, got stuff %d\n", FL, rv);
+		    //fprintf(stderr, FLFMT "OK, got stuff: %d, data: %x\n", FL, rv, data);
 			break;
-		}
-
+		} //else
+		   // fprintf(stderr, FLFMT "rv <= 0: %d, data: %x, time: %d\n", FL, rv, data, time);
+		
 		if (errno != 0 && errno != EINTR) {
-		        fprintf(stderr, FLFMT "Bad, got error, rv: %d, %s\n", FL, rv, strerror(errno));
+		    fprintf(stderr, FLFMT "Bad, got error, rv: %d, %s\n", FL, rv, strerror(errno));
 			break;
 		}
 		errno = 0 ;
 
 		read(fd, &data, sizeof(unsigned long));
+		// if ( rv <= 0 )
+		   // fprintf(stderr, FLFMT "rv <= 0: %d, data: %x, time: %d\n", FL, rv, data, time);
+
 		data >>= 8;
 		time+=(int)data;
 		if (time>=timeout) {
-//		        fprintf(stderr, FLFMT "diag_tty_read: timeout\n", FL);
+		   // fprintf(stderr, FLFMT "diag_tty_read: timeout, data: %x, time: %d\n", FL, data, time);
 			break;
 		}
 	}
@@ -946,8 +951,8 @@ diag_tty_read(struct diag_l0_device *dl0d, void *buf, size_t count, int timeout)
 		return (rv);
 
 	default:
-		fprintf(stderr, FLFMT "select on fd %d returned %s.\n",
-			FL, dl0d->fd, strerror(errno));
+		//fprintf(stderr, FLFMT "select on fd %d returned %s.\n",
+			//FL, dl0d->fd, strerror(errno));
 
 		/* Unspecific Error */
 		return (diag_iseterr(DIAG_ERR_GENERAL));

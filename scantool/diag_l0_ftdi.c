@@ -277,7 +277,6 @@ static int diag_l0_ftdi_slowinit(struct diag_l0_device *dl0d, struct diag_l1_ini
 	 */
 	diag_os_millisleep(100);
 
-	
 	/*
 	 * Now use the 0x55 sync byte to work out what baud rate the ECU is using.
          * We are probing with 9600 baud, so everything is relative to that.
