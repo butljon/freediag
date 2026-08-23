@@ -509,6 +509,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	  	    fprintf(stderr, FLFMT "Failed to send inverse %x of second key byte %x\n", FL, cbuf[0], cbuf[1]);
 	  	    return rv;
 		}
+		diag_os_millisleep(W4min);
 	}
 
 	/*
@@ -525,9 +526,6 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	 * Now receive the first 3 messages
 	 * which show ECU versions etc
 	 */
-
-		diag_os_millisleep(W4min);
-	        // obtain first messages from ECU
 		rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
 		if(rv < 0) {
 	  	    fprintf(stderr, FLFMT "Receipt of initial blocks from ECU %d failed\n", FL, target);
@@ -563,7 +561,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	     * the inverse of in.addr sent 7O1 ... but we are working here 8N1,
 	     * so need this:
 	     */
-	    for(i=0; i< 7; i++)
+	    for(i=0; i<7; i++)
 	    	if(in.addr & (1<<i))
 	    		parity *= -1;
 	      	if(parity > 0)
@@ -587,7 +585,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		wait_time = d_l2_conn->diag_l2_p2max/2 ;
 		if((d_l2_conn->diag_l2_p4max*5) > wait_time)
 			wait_time = d_l2_conn->diag_l2_p4max * 5;
-		while (diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
+		while (diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0,
 			  cbuf, sizeof(cbuf), wait_time) != DIAG_ERR_TIMEOUT);
 
 		// Connection established:
@@ -612,6 +610,8 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	cbuf[0] = DIAG_KW2K_SI_STADS;
     	cbuf[1] = 0x89;
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
+    	msg.src = d_l2_conn->diag_l2_srcaddr;
+    	msg.dest = d_l2_conn->diag_l2_destaddr;
 
     	/*
     	 * Important to get a diag_l2_send call in here because the timestamps for calls to the
@@ -718,9 +718,9 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
 
 	/* Link to the L1 device info that we keep (name, type, flags, dl0d) */
 	d_l2_conn->diag_link = dl2l;
-	d_l2_conn->diag_l2_type = type ;
-	d_l2_conn->diag_l2_srcaddr = source ;
-	d_l2_conn->diag_l2_destaddr = target ;
+	d_l2_conn->diag_l2_type = type;
+	d_l2_conn->diag_l2_srcaddr = source;
+	d_l2_conn->diag_l2_destaddr = target;
 
 	/*
 	 * We are going to assume that the ISO default timing values

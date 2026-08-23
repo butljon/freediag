@@ -31,6 +31,7 @@
 #include "diag.h"
 #include "diag_l1.h"
 #include "diag_l2.h"
+#include "diag_vag.h"
 
 #include "scantool.h"
 #include "scantool_cli.h"
@@ -71,7 +72,7 @@ int set_init(void)
 	/* Reset parameters to defaults. */
 
 	set_speed = 10400;	/* Comms speed; ECUs will probably send at 10416 bps (96us per bit) */
-	set_testerid = 0xf1;	/* Our tester ID */
+	set_testerid = DIAG_TESTER_SRC_ADDR;	/* Our tester ID */
 	set_addrtype = 1;	/* Use virtual addressing */
 	set_destaddr = 0x33;	/* Dest ECU address */
 	store_set_destaddr = set_destaddr;

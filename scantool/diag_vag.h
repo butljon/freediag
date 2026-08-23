@@ -92,6 +92,7 @@ extern "C" {
 #define DIAG_VAG_ECU_EMERGENCY  0x75	// Emergency system                  */
 #define DIAG_VAG_ECU_PARKING	0x76    // Parking help system               */
 #define DIAG_VAG_ECU_SLD	0x78	// Sliding door                      */
+#define DIAG_TESTER_SRC_ADDR 0xF1;  // default tester src address
 
 
 /*

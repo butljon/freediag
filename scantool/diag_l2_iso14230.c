@@ -730,8 +730,11 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
  	    return(DIAG_ERR_NOMEM);
  	  }
  	  msg.len = 1;
+ 	  msg.src = pX->diag_l2_srcaddr;
+ 	  msg.dest = pX->diag_l2_destaddr;
  	  buff = DIAG_KW2K_SI_STODS;
       memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
+
 
 	  rv = diag_l2_send(pX, &msg);
 	  if (rv < 0) {
@@ -835,7 +838,6 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 	if (dp->state == STATE_ESTABLISHED)
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
-
 //xxx	if(buf[3] != DIAG_KW2K_SI_TP) {
 		printf("Out-going message check: ");
 			for (i=0; i< len; i++)
@@ -846,8 +848,7 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 		buf, len, d_l2_conn->diag_l2_p4min);
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
-		fprintf(stderr, FLFMT "send about to return %d\n",
-				FL, rv);
+		fprintf(stderr, FLFMT "send about to return %d\n", FL, rv);
 
 	return rv;
 
@@ -988,21 +989,19 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
 	if(dp->state < STATE_ESTABLISHED)
-	  return;
+		return;
 
-	/* XXX fprintf not async-signal-safe */
-	if (diag_l2_debug & DIAG_DEBUG_TIMER) {
-		fprintf(stderr, FLFMT "timeout impending for %p type %d\n",
-				FL, d_l2_conn, dp->type);
-	}
+	// XXX fprintf not async-signal-safe
+	if (diag_l2_debug & DIAG_DEBUG_TIMER)
+		fprintf(stderr, FLFMT "timeout impending for %p type %d\n", FL, d_l2_conn, dp->type);
 
 	msg.data = data;
 
-	/* Prepare the "keepalive" message */
-	/* Idle using ISO "Tester Present" message */
+	// Prepare the "keepalive" message
+	// Idle using ISO "Tester Present" message
 	msg.len = 1;
-	msg.dest = 0;	/* Use default */
-	msg.src = 0;	/* Use default */
+	msg.src = d_l2_conn->diag_l2_srcaddr;
+	msg.dest = d_l2_conn->diag_l2_destaddr;
 	data[0] = DIAG_KW2K_SI_TP;
 
 	/*
