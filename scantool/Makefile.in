@@ -55,7 +55,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = scantool$(EXEEXT) diag_test$(EXEEXT)
+bin_PROGRAMS = scantool$(EXEEXT)
 subdir = scantool
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -91,9 +91,6 @@ am_libdyno_a_OBJECTS = dyno.$(OBJEXT)
 libdyno_a_OBJECTS = $(am_libdyno_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_diag_test_OBJECTS = diag_test.$(OBJEXT)
-diag_test_OBJECTS = $(am_diag_test_OBJECTS)
-diag_test_DEPENDENCIES = libdiag.a
 am_scantool_OBJECTS = scantool.$(OBJEXT) scantool_cli.$(OBJEXT) \
 	scantool_debug.$(OBJEXT) scantool_set.$(OBJEXT) \
 	scantool_test.$(OBJEXT) scantool_diag.$(OBJEXT) \
@@ -110,9 +107,9 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libdiag_a_SOURCES) $(nodist_libdiag_a_SOURCES) \
-	$(libdyno_a_SOURCES) $(diag_test_SOURCES) $(scantool_SOURCES)
+	$(libdyno_a_SOURCES) $(scantool_SOURCES)
 DIST_SOURCES = $(libdiag_a_SOURCES) $(libdyno_a_SOURCES) \
-	$(diag_test_SOURCES) $(scantool_SOURCES)
+	$(scantool_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -225,10 +222,7 @@ scantool_SOURCES = scantool.c scantool_cli.c scantool_debug.c scantool_set.c \
 	diag_err.h diag_tty.h dyno.h diag_vag.h
 
 scantool_LDADD = libdiag.a libdyno.a
-diag_test_SOURCES = diag_test.c diag.h diag_os.h diag_err.h diag_iso14230.h \
-	diag_tty.h diag_l1.h diag_l2.h
 
-diag_test_LDADD = libdiag.a
 noinst_LIBRARIES = libdiag.a libdyno.a
 
 #libdiag.a.: diag_config.c
@@ -339,9 +333,6 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
-diag_test$(EXEEXT): $(diag_test_OBJECTS) $(diag_test_DEPENDENCIES) $(EXTRA_diag_test_DEPENDENCIES) 
-	@rm -f diag_test$(EXEEXT)
-	$(LINK) $(diag_test_OBJECTS) $(diag_test_LDADD) $(LIBS)
 scantool$(EXEEXT): $(scantool_OBJECTS) $(scantool_DEPENDENCIES) $(EXTRA_scantool_DEPENDENCIES) 
 	@rm -f scantool$(EXEEXT)
 	$(LINK) $(scantool_OBJECTS) $(scantool_LDADD) $(LIBS)
@@ -375,7 +366,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l3_saej1979.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_l3_vag.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_os.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diag_tty.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dyno.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scantool.Po@am__quote@

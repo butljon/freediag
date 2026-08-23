@@ -4,7 +4,6 @@
 #this is probably why the orig. makefile had a ".depend" target...
 
 AM_CPPFLAGS = -I../include
-bin_PROGRAMS=scantool diag_test
 scantool_SOURCES=scantool.c scantool_cli.c scantool_debug.c scantool_set.c \
 	scantool_test.c scantool_diag.c scantool_vag.c scantool_dyno.c \
 	scantool_aif.c \
@@ -12,10 +11,6 @@ scantool_SOURCES=scantool.c scantool_cli.c scantool_debug.c scantool_set.c \
 	diag.h diag_os.h diag_dtc.h diag_l1.h diag_l2.h diag_l3.h \
 	diag_err.h diag_tty.h dyno.h diag_vag.h
 scantool_LDADD=libdiag.a libdyno.a
-
-diag_test_SOURCES=diag_test.c diag.h diag_os.h diag_err.h diag_iso14230.h \
-	diag_tty.h diag_l1.h diag_l2.h
-diag_test_LDADD=libdiag.a
 
 noinst_LIBRARIES=libdiag.a libdyno.a
 
