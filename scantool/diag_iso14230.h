@@ -147,6 +147,10 @@ extern "C" {
 /* FA-FE	system supplier specific */
 /* FF		reserved by document */
 
+// ISO14230 ECU IDs
+#define DIAG_KW2K_ISO14230_ECU_ENGINE 0x10
+#define DIAG_KW2K_ISO14230_ECU_ABS 0x28
+
 /* Exports */
 char *diag_l3_iso14230_decode_response(struct diag_msg *, char *, const size_t);
 

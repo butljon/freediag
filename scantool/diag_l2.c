@@ -408,6 +408,27 @@ void diag_l2_assign_l2_protocol(struct diag_l2_conn *d_l2_conn, int l2protocol) 
 
 }
 
+static target_type vAGToIso14230(target_type in) {
+  /*
+   * Ridiculous, in VAG at least, kwp2k physical ECU addresses differ to
+   * the addresses (in kw1281) used for slowinit, see Appendix,
+   * http://read.pudn.com/downloads118/ebook/500929/14230-2.pdf
+   *
+   * For KWP2K ABS controller on my VW Golf IV, need address 0x28
+   * which is translated here to 0x03 for the 5BAUD init
+   *
+   */
+	if(DIAG_VAG_ECU_ENGINE==in)
+		return DIAG_KW2K_ISO14230_ECU_ENGINE;
+	if(DIAG_VAG_ECU_ABS==in)
+		return DIAG_KW2K_ISO14230_ECU_ABS;
+	else {
+		fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
+		return in;
+	}
+
+}
+
 /*
  * The complex initialisation routine for ISOvag, which should support
  * 2 types of initialisation 5-BAUD and FAST (only 5-BAUD implemented here)
@@ -475,7 +496,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 
 	// Now do 5 baud init of supplied address
 	in.type = DIAG_L1_INITBUS_5BAUD;
-	in.addr = target;
+	in.addr = d_l2_conn->diag_l2_destaddr;
 
 	rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
 	if(rv < 0) {
@@ -547,6 +568,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		}
 		printf("VAG KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_ISO14230);
+		d_l2_conn->diag_l2_destaddr = vAGToIso14230(d_l2_conn->diag_l2_destaddr);
 
 		// Wait for the address byte inverted
 		rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, d_l2_conn->diag_l2_p3min);
@@ -621,6 +643,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
     	 * connection
     	 */
+    	diag_os_millisleep(d_l2_conn->diag_l2_p3min);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -630,7 +653,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 
     	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-
+//zzz check this is DIAG_KW2K_SI_STADS & 0x40
     	msg.len = 2;
      	if (diag_calloc(&msg.data, msg.len)) {
      	    fprintf(stderr, FLFMT "diag_calloc failed for KWPx\n", FL);
@@ -652,7 +675,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 
     	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-
+    	//zzz check this is DIAG_KW2K_SI_REID & 0x40
 	}
 
 	if((d_l2_conn->diag_l2_kb1 != 0x01 || d_l2_conn->diag_l2_kb2 != 0x0a) && d_l2_conn->diag_l2_kb2 != 0x0f) {
@@ -843,8 +866,7 @@ int diag_l2_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
 	rv = d_l2_conn->l2proto->diag_l2_proto_send(d_l2_conn, msg);
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
-		fprintf(stderr, FLFMT "diag_l2_send returns %d\n",
-				FL, rv);
+		fprintf(stderr, FLFMT "diag_l2_send returns %d\n", FL, rv);
 
 	return rv;
 }

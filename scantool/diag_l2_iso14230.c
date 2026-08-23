@@ -283,27 +283,6 @@ void decode_value(struct diag_msg *tmsg, int i) {
 
 }
 
-static target_type iso14230ToVAG(target_type in) {
-  /*
-   * Ridiculous, in VAG at least, kwp2k physical ECU addresses differ to
-   * the addresses (in kw1281) used for slowinit, see Appendix,
-   * http://read.pudn.com/downloads118/ebook/500929/14230-2.pdf
-   * 
-   * For KWP2K ABS controller on my VW Golf IV, need address 0x28
-   * which is translated here to 0x03 for the 5BAUD init
-   * 
-   */
-	if(0x10 <= in && in <= 0x17)
-		return DIAG_VAG_ECU_ENGINE;
-	if(0x28 <= in && in <= 0x2F)
-		return DIAG_VAG_ECU_ABS;
-	else {
-		fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
-		return in;
-	}
-
-}
-
 /*
  * Decode the message header, returning the length
  * of the message if a whole message has been received.
@@ -428,6 +407,10 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 
 	  switch (tmsg->data[0]) {
 
+	  case (DIAG_KW2K_SI_STADS & 0x40):
+	  case (DIAG_KW2K_SI_REID & 0x40):
+		  break;
+
 		case DIAG_KW2K_RC_RDDBLI:
 		  for(i=2; i< tmsg->len; i+=3) {
 //		    if(tmsg->data[i] != 0x25) {
@@ -477,6 +460,8 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 #define ST_STATE1	1	/* Start */
 #define ST_STATE2	2	/* Interbyte */
 #define ST_STATE3	3	/* Inter message */
+
+	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
 	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
@@ -822,8 +807,7 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 		buf[3] = msg->len;
 		offset = 4;
 	}
-	memcpy(&buf[offset], msg->data, msg->len);
-
+	memcpy(&buf[offset], msg->data, msg->len * sizeof(uint8_t));
 	len = msg->len + offset;	/* data + hdr */
 
 	if ((d_l2_conn->diag_link->diag_l2_l1flags & DIAG_L1_DOESL2CKSUM) == 0) {
