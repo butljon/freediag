@@ -621,15 +621,15 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
     	 * connection
     	 */
-    	rv = diag_l2_send(global_l2_conn, &msg);
+    	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
     		return CMD_FAILED;
     	}
     	free(msg.data);
 
-    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
-    	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 
     	msg.len = 2;
      	if (diag_calloc(&msg.data, msg.len)) {
@@ -642,16 +642,16 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	cbuf[1] = 0x9B;
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
 
-    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
-    	rv = diag_l2_send(global_l2_conn, &msg);
+    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
     		return CMD_FAILED;
     	}
     	free(msg.data);
 
-    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
-    	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 
 	}
 
@@ -744,8 +744,7 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
 	flags = type&0xffff;
 	rv = diag_l2_proto_vag_startcomms(d_l2_conn, flags, bitrate, target, source);
 
-	if (rv < 0)
-	{
+	if (rv < 0) {
 		/* Something went wrong */
 		//if (diag_l2_debug & DIAG_DEBUG_OPEN)
 		//	fprintf(stderr,FLFMT "protocol startcomms returned %d\n", FL, rv);
@@ -764,8 +763,7 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
 	 * - unless we're re-using a established connection, then no need
 	 * to re-note.
 	 */
-	if ( (reusing == 0) && d_l2_conn )
-	{
+	if ((reusing == 0) && d_l2_conn) {
 		/* And attach connection info to our main list */
 		d_l2_conn->next = diag_l2_connections ;
 		diag_l2_connections = d_l2_conn ;

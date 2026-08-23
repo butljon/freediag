@@ -814,9 +814,7 @@ int do_l3_md1pid0_rqst( struct diag_l2_conn *d_conn )
 /*
  * 9141 init
  */
-int 
-do_l2_9141_start(int destaddr)
-{
+int do_l2_9141_start(int destaddr) {
 	struct diag_l2_conn *d_conn;
 
 	d_conn = do_l2_common_start(DIAG_L1_ISO9141, DIAG_L2_PROT_ISO9141,
@@ -835,9 +833,7 @@ do_l2_9141_start(int destaddr)
 /*
  * 14120 init
  */
-int
-do_l2_14230_start(int init_type)
-{
+int do_l2_14230_start(int init_type) {
 	struct diag_l2_conn *d_conn;
 	flag_type flags = 0;
 
@@ -865,9 +861,7 @@ do_l2_14230_start(int init_type)
 /*
  * J1850 init, J1850 interface type passed as l1_type
  */
-static int
-do_l2_j1850_start(int l1_type)
-{
+static int do_l2_j1850_start(int l1_type) {
 	flag_type flags = 0;
 	struct diag_l2_conn *d_conn;
 
@@ -887,8 +881,7 @@ do_l2_j1850_start(int l1_type)
  * Generic init, using parameters set by user
  * called by cmd_diag_connect;
  */
-int do_l2_generic_start(void)
-{
+int do_l2_generic_start(void) {
 	struct diag_l2_conn *d_conn;
 	struct diag_l0_device *dl0d;
 	int rv;
