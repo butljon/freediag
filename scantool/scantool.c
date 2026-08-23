@@ -79,8 +79,6 @@
 #include "scantool_cli.h"
 #include "scantool_aif.h"
 
-CVSID("$Id: scantool.c,v 1.16 2011/08/07 02:48:43 fenugrec Exp $");
-
 /*
  * This is used to store the 1st message of a received set of messages
  * It's only 24 bytes long as this is plenty to store a J1979 message

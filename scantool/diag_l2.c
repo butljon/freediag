@@ -40,7 +40,9 @@
 #include "diag_err.h"
 #include "diag_l2.h"
 #include "diag_vag.h"
+#include "diag_iso14230.h"
 #include "diag_l2_iso9141.h"
+#include "scantool_cli.h"
 
 int diag_l2_debug;
 
@@ -418,10 +420,11 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	struct diag_serial_settings set;
 	struct diag_l2_node *node;
 	uint8_t cbuf[MAXRBUF];
-	int rv = 0, i, wait_time;
+	int rv = 0, i, wait_time, parity=1;
 
 	struct diag_l1_initbus_args in;
 	struct diag_l2_kw1281 *dp;
+	struct diag_msg	msg;
 
 	if(diag_calloc(&dp, 1)) {
 	    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
@@ -453,26 +456,24 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	 */
 	dp->master = 1;
 
-	/*
-	 * Override "set speed" value; we will probe with 9600 baud
-	 */
+	// Override "set speed" value; we will probe with 9600 baud
 	set.speed = 9600;
 	set.databits = diag_databits_8;
 	set.stopbits = diag_stopbits_1;
 	set.parflag = diag_par_n;
 
-	/* Set the speed as shown */
+	// Set the speed as shown
 	rv = diag_l1_setspeed(d_l2_conn->diag_link->diag_l2_dl0d, &set);
 	if(rv < 0) {
 	    fprintf(stderr, FLFMT "Could not set speed %d\n", FL, set.speed);
 	    return rv;
 	}
 
-	/* Flush unread input, then wait for idle bus. */
+	// Flush unread input, then wait for idle bus.
 	(void)diag_tty_iflush(d_l2_conn->diag_link->diag_l2_dl0d);
 	diag_os_millisleep(W5min);
 
-	/* Now do 5 baud init of supplied address */
+	// Now do 5 baud init of supplied address
 	in.type = DIAG_L1_INITBUS_5BAUD;
 	in.addr = target;
 
@@ -482,7 +483,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	    return rv;
 	}
 
-	/* Key bytes are in 7-Odd-1, read as 8N1 and ignore parity */
+	// Key bytes are in 7-Odd-1, read as 8N1 and ignore parity
 	rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, W2max);
 	if(rv < 0) {
 	    fprintf(stderr, FLFMT "Failed to receive 1st key mode byte\n", FL);
@@ -495,15 +496,13 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	    return rv;
 	}
 
-	/* Note down the key bytes */
+	// Note down the key bytes
 	d_l2_conn->diag_l2_kb1 = cbuf[0] & 0x7f;
 	d_l2_conn->diag_l2_kb2 = cbuf[1] & 0x7f;
 
 	if((d_l2_conn->diag_link->diag_l2_l1flags & DIAG_L1_DOESSLOWINIT) == 0) {
 		diag_os_millisleep(W4min);
-	  	/*
-		 * Now transmit KB2 inverted
-		 */
+	  	// Now transmit KB2 inverted
 		cbuf[0] = ~cbuf[1];
 		rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf, 1, d_l2_conn->diag_l2_p4min);
 		if(rv < 0) {
@@ -511,14 +510,15 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	  	    return rv;
 		}
 	}
-        /*
+
+	/*
 	 * Protocol specific things: this now a hybrid of ISO9141'ish stuff
 	 * for KW1281 and switching to ISO14230 for KWP2xxx.  We play a
 	 * similar trick to what we did with the speed in diag_l0_ftdi.c
 	 * where we switch the d_l2_conn->l2proto to ISO14230 if necessary.
 	 */
 	if(d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
-        /* (VAG) KW1281 */
+        // (VAG) KW1281
 		printf("VAG KW1281 protocol\n");
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_KW1281);
 	/*
@@ -527,19 +527,21 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	 */
 
 		diag_os_millisleep(W4min);
-	        /* obtain first messages from ECU */
+	        // obtain first messages from ECU
 		rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
 		if(rv < 0) {
 	  	    fprintf(stderr, FLFMT "Receipt of initial blocks from ECU %d failed\n", FL, target);
 	  	    return rv;
 		}
 
+		// Connection established:
 		dp->state = STATE_ESTABLISHED;
+		dp->master = 0;
 	}
 
 	if(d_l2_conn->diag_l2_kb2 == 0x0f) {
-	/* (VAG) KWP2xxx */
-		/* perform some KWP2xxx consistency checks, see ISO 14230 */
+	// (VAG) KWP2xxx
+		// perform some KWP2xxx consistency checks, see ISO 14230 */
 		    if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
 			    fprintf(stderr, FLFMT "Wierd KWP2xxx protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
 			    		FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
@@ -547,13 +549,116 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		}
 		printf("VAG KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_ISO14230);
+
+		// Wait for the address byte inverted
+		rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0, &cbuf[0], 1, d_l2_conn->diag_l2_p3min);
+
+	    if (rv < 0) {
+	    	fprintf(stderr, FLFMT "Failed to receive what should be compliment of ECU address (compliment of %x)\n", FL, target);
+	    	return rv;
+	    }
+
+	    /*
+	     * in.addr was sent 7O1; we appear to receive, echoed back from ECU,
+	     * the inverse of in.addr sent 7O1 ... but we are working here 8N1,
+	     * so need this:
+	     */
+	    for(i=0; i< 7; i++)
+	    	if(in.addr & (1<<i))
+	    		parity *= -1;
+	      	if(parity > 0)
+	      		cbuf[0] += 0x80;
+
+	      	if (cbuf[0] != ((~in.addr) & 0xFF) ) {
+	      		fprintf(stderr, FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
+	      		return diag_iseterr(DIAG_ERR_WRONGKB);
+	      	}
+
+	    /*
+		 * Now,remove any rubbish left
+		 * in inbound buffers, and wait for the bus to be
+		 * quiet for a while before we will communicate
+		 * (so that the next byte received is the first byte
+		 * of an iso14230 frame, not a middle byte)
+		 * We use 1/2 of P2max (inter response gap) or
+		 * 5 * p4max (inter byte delay), whichever is larger
+		 * a correct value to use
+		 */
+		wait_time = d_l2_conn->diag_l2_p2max/2 ;
+		if((d_l2_conn->diag_l2_p4max*5) > wait_time)
+			wait_time = d_l2_conn->diag_l2_p4max * 5;
+		while (diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
+			  cbuf, sizeof(cbuf), wait_time) != DIAG_ERR_TIMEOUT);
+
+		// Connection established:
+		dp->state = STATE_ESTABLISHED;
+		dp->master = 0;
+
+		/*
+		 * diag_l2_p3max is used later for firing stay-alive timeouts, see diag_l2.c, and
+		 * for monitoring in KWP2x. For KWP2x, the full diag_l2_p3max * 2/3
+		 * (= 10/3 secs) appears too long between stay-alive pings, so
+		 * increase the ping frequency:
+		 */
+		d_l2_conn->diag_l2_p3max = ISO_14230_TIM_MAX_P3 / 5;
+
+        // Start diagnostic session
+    	msg.len = 2;
+     	if (diag_calloc(&msg.data, msg.len)) {
+     	    fprintf(stderr, FLFMT "diag_calloc failed for KWPx\n", FL);
+     	    return(DIAG_ERR_NOMEM);
+     	}
+
+    	cbuf[0] = DIAG_KW2K_SI_STADS;
+    	cbuf[1] = 0x89;
+    	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
+
+    	/*
+    	 * Important to get a diag_l2_send call in here because the timestamps for calls to the
+    	 * timeout function (to send DIAG_KW2K_SI_TP messages to maintain the connection) are reset
+    	 * through diag_l2_send.  If don't do this then the timeout timer will wake up, see that
+    	 * dp->state == STATE_ESTABLISHED, compare timestamps find a completely old one and
+    	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
+    	 * connection
+    	 */
+    	rv = diag_l2_send(global_l2_conn, &msg);
+    	if(rv < 0) {
+    		fprintf(stderr, FLFMT "Failed to send request\n", FL);
+    		return CMD_FAILED;
+    	}
+    	free(msg.data);
+
+    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+
+    	msg.len = 2;
+     	if (diag_calloc(&msg.data, msg.len)) {
+     	    fprintf(stderr, FLFMT "diag_calloc failed for KWPx\n", FL);
+     	    return(DIAG_ERR_NOMEM);
+     	}
+
+    	cbuf[0] = DIAG_KW2K_SI_REID;
+    // could try without 0x9B here: 2nd parameter seems to optional anyway
+    	cbuf[1] = 0x9B;
+    	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
+
+    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_send(global_l2_conn, &msg);
+    	if(rv < 0) {
+    		fprintf(stderr, FLFMT "Failed to send request\n", FL);
+    		return CMD_FAILED;
+    	}
+    	free(msg.data);
+
+    	diag_os_millisleep(global_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_recv(global_l2_conn, global_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+
 	}
 
 	if((d_l2_conn->diag_l2_kb1 != 0x01 || d_l2_conn->diag_l2_kb2 != 0x0a) && d_l2_conn->diag_l2_kb2 != 0x0f) {
-		fprintf(stderr, FLFMT "Failed to connect with KW1281 or KWP2xxx\n", FL);
+		fprintf(stderr, FLFMT "Failed to connect with KW1281 or KWP2xxx, kb1: %x, kb2: %x\n", FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
 			return -1;
 	}
-	dp->master = 0;
 
 	return 0;
 

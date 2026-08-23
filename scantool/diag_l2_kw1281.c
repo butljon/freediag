@@ -262,54 +262,52 @@ void decode_value_kw1281(struct diag_msg *tmsg, int i) {
     int j;
     uint8_t displayBit, value;
     double temp =0;
-  /* decoding according to http://www.blafusel.de/obd/obd2_kw1281.html */
+  /* decoding according to https://github.com/ibanezgomez/FISBlocks/blob/master/KWP.cpp */
     switch(tmsg->data[i]) {
         case 0x01:
-            printf("%f rpm\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.2));
+            printf("%f rpm\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.2));
             break;
         case 0x02:
-            printf("Absoulte (throttle) position: %f \%\n",((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+            printf("% (throttle) position: %f \%\n",((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.002));
             break;
         case 0x03:
-            printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
+            printf("Angle: %f degrees\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.002));
             break;
         case 0x04:
-            printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
+            printf("ATDC: %f\n", (abs((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.01));
             break;
         case 0x05:
-            printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-100) *0.1));
             break;
         case 0x06:
-        case 0x15:
-        case 0x16:
-            printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
+            printf("Voltage: %f V\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.001));
             break;
         case 0x07:
-            printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+            printf("Speed: %f km/h\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.01));
             break;
         case 0x08:
-            printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
+            printf("Activated flushing rate(?): %f\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.1));
             break;
         case 0x09:
-            printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
+            printf("Angle %f degrees\n", (((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.02));
             break;
         case 0x0a:
-            printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
+            printf("COLD/WARM: %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
             break;
         case 0x0B:
-            printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
+            printf("Adaptation value(?): %f\n", (((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-128)*0.0001)+1));
             break;
         case 0x0c:
-            printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
+            printf("Resistance: %f ohm\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.001));
             break;
         case 0x0d:
-            printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
+            printf("Length: %f mm\n", (((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.001));
             break;
         case 0x0e:
-            printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
+            printf("Pressure: %f bar\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.005));
             break;
         case 0x0F:
-            printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
+            printf("Time: %f ms\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.01));
             break;
         case 0x10:
             printf("8 bit block: <");
@@ -320,14 +318,152 @@ void decode_value_kw1281(struct diag_msg *tmsg, int i) {
             }
             printf(">\n");
             break;
+        case 0x12:
+            printf("Pressure: %f mbar\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.04));
+            break;
+        case 0x13:
+            printf("Volume: %f L\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.01));
+            break;
+        case 0x14:
+            printf("\%: %f\n", ((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-128)/128));
+            break;
+        case 0x15:
+            printf("Volts: %f V\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1] *0.001));
+            break;
+        case 0x16:
+            printf("Time: %f ms\n", ((double)tmsg->data[i+1]*(double)tmsg->data[i+2]*0.001));
+            break;
         case 0x17:
-            printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
+            printf("Valve duty cycle(?): %f \%\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/256));
+            break;
+        case 0x18:
+            printf("Current: %f A\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.001));
+            break;
+        case 0x19:
+            printf("Acceleration: %f g/s\n", ((double)tmsg->data[i+2]*1.421) + ((double)tmsg->data[i+1]/182));
+            break;
+        case 0x1A:
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+2] - (double)tmsg->data[i+1]));
+            break;
+        case 0x1B:
+            printf("Angle: %f degrees\n", (abs((double)tmsg->data[i+2]-128) *(double)tmsg->data[i+1] * 0.01));
+            break;
+        case 0x1C:
+            printf("Unknown (b-a): %f C\n", ((double)tmsg->data[i+2] - (double)tmsg->data[i+1]));
+            break;
+        case 0x1E:
+            printf("Deg k/w: %f C\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/12));
+            break;
+        case 0x1F:
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/2560));
             break;
         case 0x21:
-            printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
+            printf("\%: %f\n", tmsg->data[i+1] ? (100*(double)tmsg->data[i+2]/(double)tmsg->data[i+1]) : (100 * (double)tmsg->data[i+1]));
+            break;
+        case 0x22:
+            printf("Power: %f kW\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]*0.01));
+            break;
+        case 0x23:
+            printf("Flow: %f L/h\n", tmsg->data[i+1] ? (100 * (double)tmsg->data[i+2] / (double)tmsg->data[i+1]) : (100 * (double)tmsg->data[i+2]));
+            break;
+        case 0x24:
+            printf("Distance: %f km\n", ((((unsigned long) tmsg->data[i+1]*2560)+((unsigned long) tmsg->data[i+2]*10))));
+            break;
+        case 0x25:
+            printf("Unknown (a, b): %f, %f\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
+            break;
+        case 0x26:
+            printf("Deg k/w: %f\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]*0.001));
+            break;
+        case 0x27:
+            printf("Flow: %f mg/h\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/256));
+            break;
+        case 0x28:
+            printf("Current: %f A\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)-400));
+            break;
+        case 0x29:
+            printf("Charge: %f Ah\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*255)));
+            break;
+        case 0x2A:
+            printf("Kw: %f\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)-400));
+            break;
+        case 0x2B:
+            printf("Voltage: %f V\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)));
+            break;
+        case 0x2C:
+            printf("%2d:%2d\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
+            break;
+        case 0x2D:
+            printf("Unknown 0.1*a*b/100: %f\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.1/100));
+            break;
+        case 0x2E:
+        	printf("Deg k/w: %f\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]-3200)*0.0027);
+            break;
+        case 0x2F:
+            printf("Time: %f ms\n", ((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]);
+            break;
+        case 0x30:
+            printf("Unknown b+a*255: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*255)));
+            break;
+        case 0x31:
+            printf("Flow: %f mg/h\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.1/4));
+            break;
+        case 0x32:
+            printf("Pressure: %f mbar\n", (((double)tmsg->data[i+2]-128)/((double)tmsg->data[i+1]*0.01)));
+            break;
+        case 0x33:
+            printf("Flow: %f kW\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]/255));
+            break;
+        case 0x34:
+            printf("Torque: %f Nm\n", (((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.02)-(double)tmsg->data[i+1]));
+            break;
+        case 0x35:
+            printf("Acceleration: %f g/s\n", ((((double)tmsg->data[i+2]-128)*1.4222)+((double)tmsg->data[i+1]*0.006)));
+            break;
+        case 0x36:
+            printf("Count: %f\n", (((double)tmsg->data[i+1]*256) + (double)tmsg->data[i+2]));
+            break;
+        case 0x37:
+            printf("Time: %f s\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/200));
+            break;
+        case 0x38:
+            printf("WSC: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256)));
+            break;
+        case 0x39:
+            printf("WSC: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256)+65536));
+            break;
+        case 0x3B:
+            printf("Acceleration: %f g/s\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))/32768));
+            break;
+        case 0x3C:
+            printf("Time: %f s\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.01));
+            break;
+        case 0x3E:
+            printf("Siemens?: %f S\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.256));
+            break;
+        case 0x40:
+            printf("Resistance: %f ohm\n", ((double)tmsg->data[i+2]+(double)tmsg->data[i+1]));
+            break;
+        case 0x41:
+            printf("Length: %f mm\n", (((double)tmsg->data[i+2]-127)*(double)tmsg->data[i+1]*0.01));
+            break;
+        case 0x42:
+            printf("Voltage: %f V\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/511.12));
+            break;
+        case 0x43:
+            printf("Angle: %f degrees\n", (((double)tmsg->data[i+1]*640)+((double)tmsg->data[i+2]*2.5)));
+            break;
+        case 0x44:
+            printf("Rotation: %f degree/s\n", ((((double)tmsg->data[i+1]*256)+(double)tmsg->data[i+2])/7.365));
+            break;
+        case 0x45:
+            printf("Pressure: %f bar\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.3254));
+            break;
+        case 0x46:
+            printf("Acceleration: %f m/s^2\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.192));
             break;
         default:
-            printf("Don't know that unit, please add here!\n");
+            printf("Don't know that unit, please add here, (a, b): %f, %f\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
             break;
     }
 
@@ -348,8 +484,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 	while(tmsg) {
 	    switch (tmsg->type) {
 		    case DIAG_VAG_RSP_ASCII:
-		  //xxx
-		        //printf("DIAG_VAG_RSP_ASCII <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_ASCII <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i++)
 		            printf("%c", tmsg->data[i]);
 		        printf("\n");
@@ -358,8 +493,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_DTC_RQST:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_DTC_RQST <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_DTC_RQST <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i+=3) {
 		            printf("Error code %d, code: <%x>", (i/3 +1), tmsg->data[i]);
 		            printf("<%x>", tmsg->data[i+1]);
@@ -368,8 +502,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_DATA_OTHER:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_DATA_OTHER/GROUP_READ <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_DATA_OTHER/GROUP_READ <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i+=3) {
 		            printf("(Sensor) block %d, block id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		            printf("sensor bytes: <%x>", tmsg->data[i+1]);
@@ -379,8 +512,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_CHAN_READ:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_CHAN_READ/ADAPTATION_READ <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_CHAN_READ/ADAPTATION_READ <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i+=3) {
 		            printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		            printf("channel bytes: <%x>", tmsg->data[i+1]);
@@ -392,8 +524,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		/* not going to print ACKs */
 		        break;
 		    case DIAG_VAG_RSP_GROUP_HEADER:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_GROUP_HEADER <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_GROUP_HEADER <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i+=3) {
 		            printf("Channel %d, channel id: <%x>, ", (i/3 +1), tmsg->data[i]);
 		            printf("channel bytes: <%x>", tmsg->data[i+1]);
@@ -402,8 +533,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_ROM:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_ROM <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_ROM <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i++)
 		            printf("%c", tmsg->data[i]);
 		        printf("\n");
@@ -412,8 +542,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_OUTPUT_TEST:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_OUTPUT_TEST <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_OUTPUT_TEST <%x> type message received\n", tmsg->type);
 		        for(i=0; i<tmsg->len; i++)
 		            printf("%c", tmsg->data[i]);
 		        printf("\n");
@@ -422,8 +551,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
 		        printf("\n");
 		        break;
 		    case DIAG_VAG_RSP_BASIC_SETTING:
-		  //xxx
-		    	//printf("DIAG_VAG_RSP_BASIC_SETTING <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_RSP_BASIC_SETTING <%x> type message received\n", tmsg->type);
 		        printf("%d", tmsg->data[0]);
 		        for(i=1; i<tmsg->len; i++)
 		            printf(", %d", tmsg->data[i]);
@@ -431,8 +559,7 @@ void l2_kw1281_data_rcv(void *handle __attribute__((unused)), struct diag_msg *m
                 break;
 		    case DIAG_VAG_END_FRAME:
 		/* seems to just be an empty Group or Channel address ? */
-		  //xxx
-		    	//printf("DIAG_VAG_END_FRAME <%x> type message received\n", tmsg->type);
+		  //xxx printf("DIAG_VAG_END_FRAME <%x> type message received\n", tmsg->type);
 		        printf("%d", tmsg->data[0]);
 		        for(i=1; i<tmsg->len; i++)
 		            printf(", %d", tmsg->data[i]);
@@ -464,7 +591,6 @@ static int diag_l2_proto_kw1281_recv_byte(struct diag_l2_conn *d_l2_conn, int ti
 		fprintf(stderr, FLFMT "failed to receive a byte\n", FL);
 		return rv;
 	}
-	//xxx
 	//fprintf(stderr, FLFMT "received byte %x\n", FL, *databyte);
 	
 	if(!end) {
@@ -644,8 +770,7 @@ static int diag_l2_proto_kw1281_send_byte(struct diag_l2_conn *d_l2_conn, databy
 	diag_os_millisleep(d_l2_conn->diag_l2_p4min);
 
 	/* Send the data byte */
-	//xxx
-	//fprintf(stderr, FLFMT "sending byte %x\n", FL, db);
+	//xxx fprintf(stderr, FLFMT "sending byte %x\n", FL, db);
 	rv = diag_l1_send(d_l2_conn->diag_link->diag_l2_dl0d, 0, &db, 1, d_l2_conn->diag_l2_p4min);
 	if(rv < 0) {
 	    fprintf(stderr, FLFMT "Failed to send byte %x\n", FL, db);
@@ -712,8 +837,7 @@ static int diag_l2_proto_kw1281_send(struct diag_l2_conn *d_l2_conn, struct diag
 
 	/* Now send the data */
 	memcpy(&cbuf[0], msg->data, msg->len);
-//xxx
-	//printf("sending %d\n", cbuf);
+//xxx printf("sending %d\n", cbuf);
 
 	for(i=0; i<msg->len; i++)
 	{

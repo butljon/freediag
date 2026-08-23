@@ -35,10 +35,6 @@ extern "C" {
 
 int diag_l2_14230_add(void);
 
-void
-l2_iso14230_data_rcv(void *handle __attribute__((unused)),
-struct diag_msg *msg);
-
 #if defined(__cplusplus)
 }
 #endif

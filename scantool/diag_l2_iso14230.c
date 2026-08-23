@@ -26,12 +26,7 @@
  *
  */
 
-#ifdef WIN32
-#include <process.h>
-#else
 #include <unistd.h>
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,14 +41,10 @@
 
 #include "diag_l2_iso14230.h" /* prototypes for this file */
 
-CVSID("$Id: diag_l2_iso14230.c,v 1.5 2011/08/07 02:17:46 fenugrec Exp $");
-
-
 /*
  * ISO 14230 specific data
  */
-struct diag_l2_14230
-{
+struct diag_l2_14230 {
 	uint8_t type;		/* FAST/SLOW/CARB */
 	
 	uint8_t srcaddr;	/* Src address used */
@@ -80,85 +71,219 @@ struct diag_l2_14230
  */
 void decode_value(struct diag_msg *tmsg, int i) {
 
-	int j;
-	uint8_t displayBit, value;
-	double temp =0;
-	/* decoding according to http://www.blafusel.de/obd/obd2_kw1281.html */
-	switch(tmsg->data[i]) {
-		case 0x01:
-			printf("%f rpm\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.2));
-			break;
-		case 0x02:
-			printf("Absoulte (throttle) position: %f \%\n",((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
-			break;
-		case 0x03:
-			printf("Angle: %f degrees\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2] *0.002));
-			break;
-		case 0x04:
-			printf("Unknown abs(b-127)*0.01*a: %f\n", (abs((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.01));
-			break;
-		case 0x05:
-			printf("Temperature: %f C\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-100) *0.1));
-			break;
-		case 0x06:
-		case 0x15:
-		case 0x16:
-			printf("Voltage: %f V\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.001));
-			break;
-		case 0x07:
-			printf("Speed: %f km/h\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
-			break;
-		case 0x08:
-			printf("Activated flushing rate(?): %f\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.1));
-			break;
-		case 0x09:
-			printf("Unknown (b-127)*0.02*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.02));
-			break;
-		case 0x0a:
-			printf("Unknown (if b==0 then 'COLD', else 'WARM'): %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
-			break;
-		case 0x0B:
-			printf("Adaptation value(?): %f\n", ((double) tmsg->data[i+1] * ((double) tmsg->data[i+2]-128)*0.0001+1));
-			break;
-		case 0x0c:
-			printf("Unknown a*b*0.001*a: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.001));
-			break;
-		case 0x0d:
-			printf("Unknown (b-127)*0.001*a: %f\n", (((double) tmsg->data[i+2] - 127) * (double) tmsg->data[i+1] *0.001));
-			break;
-		case 0x0e:
-			printf("Unknown 0.005*a*b: %f\n", ((double) tmsg->data[i+2] * (double) tmsg->data[i+1] *0.005));
-			break;
-		case 0x0F:
-			printf("Time: %f ms\n", ((double) tmsg->data[i+1] * (double) tmsg->data[i+2]*0.01));
-			break;
-		case 0x10:
-			printf("8 bit block: <");
-			value = tmsg->data[i+2];
-			for(j=0; j<8; j++) {
-				printf("%d", displayBit = (value & 0x80) ? 1 : 0);
-				value = value << 1;
-			}
-			printf(">\n");
-			break;
-		case 0x17:
-			printf("Valve duty cycle(?): %f \%\n", ((double) tmsg->data[i+2]*(double) tmsg->data[i+1]/256));
-			break;
-		case 0x21:
-			printf("Gaspedal angle(?): %f \%\n", tmsg->data[i+1] ? (100 * (double) tmsg->data[i+2] / (double) tmsg->data[i+1]) : (100 * (double) tmsg->data[i+2]));
-			break;
-		default:
-			printf("Don't know that unit, please add here!\n");
-			break;
-	}
+    int j;
+    uint8_t displayBit, value;
+    double temp =0;
+  /* decoding according to https://github.com/ibanezgomez/FISBlocks/blob/master/KWP.cpp */
+    switch(tmsg->data[i]) {
+        case 0x01:
+            printf("%f rpm\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.2));
+            break;
+        case 0x02:
+            printf("% (throttle) position: %f \%\n",((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.002));
+            break;
+        case 0x03:
+            printf("Angle: %f degrees\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2] *0.002));
+            break;
+        case 0x04:
+            printf("ATDC: %f\n", (abs((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.01));
+            break;
+        case 0x05:
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-100) *0.1));
+            break;
+        case 0x06:
+            printf("Voltage: %f V\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.001));
+            break;
+        case 0x07:
+            printf("Speed: %f km/h\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.01));
+            break;
+        case 0x08:
+            printf("Activated flushing rate(?): %f\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.1));
+            break;
+        case 0x09:
+            printf("Angle %f degrees\n", (((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.02));
+            break;
+        case 0x0a:
+            printf("COLD/WARM: %s\n", tmsg->data[i+2] == 0 ? "COLD" : "WARM");
+            break;
+        case 0x0B:
+            printf("Adaptation value(?): %f\n", (((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-128)*0.0001)+1));
+            break;
+        case 0x0c:
+            printf("Resistance: %f ohm\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.001));
+            break;
+        case 0x0d:
+            printf("Length: %f mm\n", (((double)tmsg->data[i+2] - 127) * (double)tmsg->data[i+1] *0.001));
+            break;
+        case 0x0e:
+            printf("Pressure: %f bar\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.005));
+            break;
+        case 0x0F:
+            printf("Time: %f ms\n", ((double)tmsg->data[i+1] * (double)tmsg->data[i+2]*0.01));
+            break;
+        case 0x10:
+            printf("8 bit block: <");
+            value = tmsg->data[i+2];
+            for(j=0; j<8; j++) {
+	            printf("%d", displayBit = (value & 0x80) ? 1 : 0);
+	            value = value << 1;
+            }
+            printf(">\n");
+            break;
+        case 0x12:
+            printf("Pressure: %f mbar\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.04));
+            break;
+        case 0x13:
+            printf("Volume: %f L\n", ((double)tmsg->data[i+2] * (double)tmsg->data[i+1] *0.01));
+            break;
+        case 0x14:
+            printf("\%: %f\n", ((double)tmsg->data[i+1] * ((double)tmsg->data[i+2]-128)/128));
+            break;
+        case 0x15:
+            printf("Volts: %f V\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1] *0.001));
+            break;
+        case 0x16:
+            printf("Time: %f ms\n", ((double)tmsg->data[i+1]*(double)tmsg->data[i+2]*0.001));
+            break;
+        case 0x17:
+            printf("Valve duty cycle(?): %f \%\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/256));
+            break;
+        case 0x18:
+            printf("Current: %f A\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.001));
+            break;
+        case 0x19:
+            printf("Acceleration: %f g/s\n", ((double)tmsg->data[i+2]*1.421) + ((double)tmsg->data[i+1]/182));
+            break;
+        case 0x1A:
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+2] - (double)tmsg->data[i+1]));
+            break;
+        case 0x1B:
+            printf("Angle: %f degrees\n", (abs((double)tmsg->data[i+2]-128) *(double)tmsg->data[i+1] * 0.01));
+            break;
+        case 0x1C:
+            printf("Unknown (b-a): %f C\n", ((double)tmsg->data[i+2] - (double)tmsg->data[i+1]));
+            break;
+        case 0x1E:
+            printf("Deg k/w: %f C\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/12));
+            break;
+        case 0x1F:
+            printf("Temperature: %f C\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/2560));
+            break;
+        case 0x21:
+            printf("\%: %f\n", tmsg->data[i+1] ? (100*(double)tmsg->data[i+2]/(double)tmsg->data[i+1]) : (100 * (double)tmsg->data[i+1]));
+            break;
+        case 0x22:
+            printf("Power: %f kW\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]*0.01));
+            break;
+        case 0x23:
+            printf("Flow: %f L/h\n", tmsg->data[i+1] ? (100 * (double)tmsg->data[i+2] / (double)tmsg->data[i+1]) : (100 * (double)tmsg->data[i+2]));
+            break;
+        case 0x24:
+            printf("Distance: %f km\n", ((((unsigned long) tmsg->data[i+1]*2560)+((unsigned long) tmsg->data[i+2]*10))));
+            break;
+        case 0x25:
+            printf("Unknown (a, b): %f, %f\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
+            break;
+        case 0x26:
+            printf("Deg k/w: %f\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]*0.001));
+            break;
+        case 0x27:
+            printf("Flow: %f mg/h\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/256));
+            break;
+        case 0x28:
+            printf("Current: %f A\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)-400));
+            break;
+        case 0x29:
+            printf("Charge: %f Ah\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*255)));
+            break;
+        case 0x2A:
+            printf("Kw: %f\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)-400));
+            break;
+        case 0x2B:
+            printf("Voltage: %f V\n", (((double)tmsg->data[i+2]*0.1)+((double)tmsg->data[i+1]*25.5)));
+            break;
+        case 0x2C:
+            printf("%2d:%2d\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
+            break;
+        case 0x2D:
+            printf("Unknown 0.1*a*b/100: %f\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.1/100));
+            break;
+        case 0x2E:
+        	printf("Deg k/w: %f\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]-3200)*0.0027);
+            break;
+        case 0x2F:
+            printf("Time: %f ms\n", ((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]);
+            break;
+        case 0x30:
+            printf("Unknown b+a*255: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*255)));
+            break;
+        case 0x31:
+            printf("Flow: %f mg/h\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.1/4));
+            break;
+        case 0x32:
+            printf("Pressure: %f mbar\n", (((double)tmsg->data[i+2]-128)/((double)tmsg->data[i+1]*0.01)));
+            break;
+        case 0x33:
+            printf("Flow: %f kW\n", (((double)tmsg->data[i+2]-128)*(double)tmsg->data[i+1]/255));
+            break;
+        case 0x34:
+            printf("Torque: %f Nm\n", (((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.02)-(double)tmsg->data[i+1]));
+            break;
+        case 0x35:
+            printf("Acceleration: %f g/s\n", ((((double)tmsg->data[i+2]-128)*1.4222)+((double)tmsg->data[i+1]*0.006)));
+            break;
+        case 0x36:
+            printf("Count: %f\n", (((double)tmsg->data[i+1]*256) + (double)tmsg->data[i+2]));
+            break;
+        case 0x37:
+            printf("Time: %f s\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/200));
+            break;
+        case 0x38:
+            printf("WSC: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256)));
+            break;
+        case 0x39:
+            printf("WSC: %f\n", ((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256)+65536));
+            break;
+        case 0x3B:
+            printf("Acceleration: %f g/s\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))/32768));
+            break;
+        case 0x3C:
+            printf("Time: %f s\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.01));
+            break;
+        case 0x3E:
+            printf("Siemens?: %f S\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]*0.256));
+            break;
+        case 0x40:
+            printf("Resistance: %f ohm\n", ((double)tmsg->data[i+2]+(double)tmsg->data[i+1]));
+            break;
+        case 0x41:
+            printf("Length: %f mm\n", (((double)tmsg->data[i+2]-127)*(double)tmsg->data[i+1]*0.01));
+            break;
+        case 0x42:
+            printf("Voltage: %f V\n", ((double)tmsg->data[i+2]*(double)tmsg->data[i+1]/511.12));
+            break;
+        case 0x43:
+            printf("Angle: %f degrees\n", (((double)tmsg->data[i+1]*640)+((double)tmsg->data[i+2]*2.5)));
+            break;
+        case 0x44:
+            printf("Rotation: %f degree/s\n", ((((double)tmsg->data[i+1]*256)+(double)tmsg->data[i+2])/7.365));
+            break;
+        case 0x45:
+            printf("Pressure: %f bar\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.3254));
+            break;
+        case 0x46:
+            printf("Acceleration: %f m/s^2\n", (((double)tmsg->data[i+2]+((double)tmsg->data[i+1]*256))*0.192));
+            break;
+        default:
+            printf("Don't know that unit, please add here, (a, b): %f, %f\n", (double)tmsg->data[i+1], (double)tmsg->data[i+2]);
+            break;
+    }
 
-	return;
+    return;
 
 }
 
-static target_type
-Iso14230ToVAG(target_type in)
-{
+static target_type iso14230ToVAG(target_type in) {
   /*
    * Ridiculous, in VAG at least, kwp2k physical ECU addresses differ to
    * the addresses (in kw1281) used for slowinit, see Appendix,
@@ -168,14 +293,15 @@ Iso14230ToVAG(target_type in)
    * which is translated here to 0x03 for the 5BAUD init
    * 
    */
-  if(0x10 <= in && in <= 0x17)
-    return DIAG_VAG_ECU_ENGINE;
-  if(0x28 <= in && in <= 0x2F)
-    return DIAG_VAG_ECU_ABS;
-  else {
-    fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
-    return in;
-  }
+	if(0x10 <= in && in <= 0x17)
+		return DIAG_VAG_ECU_ENGINE;
+	if(0x28 <= in && in <= 0x2F)
+		return DIAG_VAG_ECU_ABS;
+	else {
+		fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
+		return in;
+	}
+
 }
 
 /*
@@ -184,11 +310,9 @@ Iso14230ToVAG(target_type in)
  * Note that this may be called with more than one message
  * but it only worries about the first message
  */
-static int
-diag_l2_proto_14230_decode(uint8_t *data, int len,
+static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		 int *hdrlen, int *datalen, int *source, int *dest,
-		int first_frame)
-{
+		int first_frame) {
 	int dl;
 
 	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
@@ -290,16 +414,8 @@ diag_l2_proto_14230_decode(uint8_t *data, int len,
 }
 
 /* basic ISO14230 callback routine */
-#ifdef WIN32
-void
-l2_iso14230_data_rcv(void *handle,
-struct diag_msg *msg)
-#else
-void
-l2_iso14230_data_rcv(void *handle __attribute__((unused)),
-struct diag_msg *msg)
-#endif
-{
+void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg *msg) {
+
 	int i;
 	struct diag_msg *tmsg;
 	/*
@@ -350,10 +466,8 @@ struct diag_msg *msg)
  * us a complete message, and we will wait a little bit longer than the normal
  * timeout to detect "end of all responses"
  */
-static int
-diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int timeout,
-	uint8_t *data, int *pDatalen)
-{
+static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int timeout,
+	uint8_t *data, int *pDatalen) {
 	struct diag_l2_14230 *dp;
 	int rv, l1_doesl2frame, l1flags;
 	int tout;
@@ -602,309 +716,7 @@ diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 	return rv;
 }
 
-
-/* External interface */
-
-static int
-diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg);
-/*
- * The complex initialisation routine for ISO14230, which supports
- * 2 types of initialisation (5-BAUD, FAST) and functional
- * and physical addressing. The ISO14230 spec describes CARB initialisation
- * which is done in the ISO9141 code
- *
- * Remember, we have to wait longer on smart L1 interfaces.
- */
-static int
-diag_l2_proto_14230_startcomms( struct diag_l2_conn	*d_l2_conn, flag_type flags,
-	int bitrate, target_type target, source_type source)
-{
-	struct diag_l2_14230 *dp;
-	struct diag_msg	msg;
-	uint8_t data[MAXRBUF];
-	int rv, wait_time;
-	int hdrlen, datalen, datasrc;
-	uint8_t cbuf[MAXRBUF];
-	int len, i, parity=1;
-	int timeout;
-	struct diag_serial_settings set;
-
-	struct diag_l1_initbus_args in;
-
-	if (diag_calloc(&dp, 1))
-		return diag_iseterr(DIAG_ERR_NOMEM);
-
-	d_l2_conn->diag_l2_proto_data = (void *)dp;
-	dp->type = flags & DIAG_L2_TYPE_INITMASK;
-
-	dp->srcaddr = source;
-	dp->dstaddr = target;
-	dp->modeflags = flags;
-	dp->first_frame = 1;
-
-	memset(data, 0, sizeof(data));
-
-	/*
-	 * If 0 has been specified, use the correct speed
-	 * for ISO14230 protocol
-	 */
-	if (bitrate == 0)
-		bitrate = 10400;
-	d_l2_conn->diag_l2_speed = bitrate;
-
-	set.speed = bitrate;
-	set.databits = diag_databits_8;
-	set.stopbits = diag_stopbits_1;
-	set.parflag = diag_par_n;
-
-	/* Set the speed as shown */
-	
-	if (rv=diag_l1_setspeed(d_l2_conn->diag_link->diag_l2_dl0d, &set))
-	{
-		free(dp);
-		dp=0;
-		return diag_iseterr(rv);
-	}
-
-	dp->state = STATE_CONNECTING ;
-
-	/* Flush unread input, then wait for idle bus. */
-	(void)diag_tty_iflush(d_l2_conn->diag_link->diag_l2_dl0d);
-	diag_os_millisleep(300);
-
-	switch (dp->type) {
-	/* Fast initialisation */
-	case DIAG_L2_TYPE_FASTINIT:
-
-		/* Build an ISO14230 StartComms message */
-		if (flags & DIAG_L2_TYPE_FUNCADDR)
-		{
-			msg.fmt = DIAG_FMT_ISO_FUNCADDR;
-			d_l2_conn->diag_l2_physaddr = 0; /* Don't know it yet */
-		}
-		else
-		{
-			msg.fmt = 0;
-			d_l2_conn->diag_l2_physaddr = target;
-		}
-		msg.src = source;
-		msg.dest = target;
-		msg.len = 1 ;
-		data[0]= DIAG_KW2K_SI_SCR ;	/* startCommunication rqst*/
-		msg.data = data;
-
-		/* Do fast init stuff */
-		in.type = DIAG_L1_INITBUS_FAST;
-		rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
-
-		if (rv < 0)
-			break;
-
-		/* Send the prepared message */
-		diag_l2_proto_14230_send(d_l2_conn, &msg);
-
-		if (d_l2_conn->diag_link->diag_l2_l1flags & DIAG_L1_DOESL2FRAME)
-			timeout = 200;
-		else
-			timeout = d_l2_conn->diag_l2_p2max + 20;
-
-		/* And wait for a response, ISO14230 says will arrive in P2 */
-		rv = diag_l2_proto_14230_int_recv(d_l2_conn,
-				timeout, data, &len);
-		if (rv < 0) {
-			free(dp);
-			return diag_iseterr(rv);
-		}
-
-		rv = diag_l2_proto_14230_decode( data, len,
-			&hdrlen, &datalen, &datasrc, NULL, dp->first_frame);
-		if (rv < 0) {
-			free(dp);
-			return diag_iseterr(rv);
-		}
-
-		switch (data[hdrlen]) {
-		case DIAG_KW2K_RC_SCRPR:	/* StartComms +ve response */
-
-			d_l2_conn->diag_l2_kb1 = data[hdrlen+1];
-			d_l2_conn->diag_l2_kb2 = data[hdrlen+2];
-			d_l2_conn->diag_l2_physaddr = datasrc;
-
-			if (diag_l2_debug & DIAG_DEBUG_PROTO) {
-				fprintf(stderr,
-					FLFMT "diag_l2_14230_StartComms",
-					FL);
-				fprintf(stderr," Physaddr 0x%x",
-					datasrc);
-				fprintf(stderr," KB1 = %x, KB2 = %x\n",
-					d_l2_conn->diag_l2_kb1,
-					d_l2_conn->diag_l2_kb2);
-			}
-			dp->state = STATE_ESTABLISHED ;
-			break;
-		case DIAG_KW2K_RC_NR:
-			if (diag_l2_debug & DIAG_DEBUG_PROTO) {
-				fprintf(stderr,
-					FLFMT "diag_l2_14230_StartComms",
-					FL);
-				fprintf(stderr, " got -ve response\n");
-			}
-			free(dp);
-			return diag_iseterr(DIAG_ERR_ECUSAIDNO);
-		default:
-			if (diag_l2_debug & DIAG_DEBUG_PROTO) {
-				fprintf(stderr,
-					FLFMT "diag_l2_14230_StartComms",
-					FL);
-				fprintf(stderr, " got unexpected response 0x%x\n",
-					data[hdrlen]);
-			}
-			free(dp);
-			return diag_iseterr(DIAG_ERR_ECUSAIDNO);
-		}
-		break;
-	/* 5 Baud init */
-	case DIAG_L2_TYPE_SLOWINIT:
-		in.type = DIAG_L1_INITBUS_5BAUD;
-		in.addr = Iso14230ToVAG(target);
-		rv = diag_l2_ioctl(d_l2_conn, DIAG_IOCTL_INITBUS, &in);
-		if (rv < 0)
-			break;
-
-		/* Mode bytes are in 7-Odd-1, read as 8N1 and ignore parity */
-		rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-			cbuf, 1, 100);
-		if (rv < 0)
-			break;
-		rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-			&cbuf[1], 1, 100);
-		if (rv < 0)
-			break;
-
-		/* ISO14230 uses KB2 of 0x8F */
-		if (cbuf[1] != 0x8f)
-			return diag_iseterr(DIAG_ERR_WRONGKB);
-
-		/* Note down the mode bytes */
-		d_l2_conn->diag_l2_kb1 = cbuf[0] & 0x7f;
-		d_l2_conn->diag_l2_kb2 = cbuf[1] & 0x7f;
-
-		if ( (d_l2_conn->diag_link->diag_l2_l1flags
-			& DIAG_L1_DOESSLOWINIT) == 0) {
-
-			diag_os_millisleep(W4min);
-
-			/*
-			 * Now transmit KB2 inverted
-			 */
-// original code	cbuf[0] = ~ d_l2_conn->diag_l2_kb2;
-			cbuf[0] = ~ cbuf[1];
-			rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-				cbuf, 1, d_l2_conn->diag_l2_p4min);
-
-		      if (d_l2_conn->diag_l2_kb2 == 0x0f) {
-		    /* KWP20x */
-		    /* perform some KWP20x consistency checks, see ISO 14230 */
-			if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
-			  fprintf(stderr, FLFMT "Wierd KWP20x protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
-				FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
-			  return -1;
-			}
-		
-			fprintf(stderr, "KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
-			
-		      } else {
-			  if (d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
-			  /* (VAG) KW1281 */
-			    fprintf(stderr, FLFMT "Looks like VAG KW1281 protocol\n", FL);
-			    return -1;
-			  } else {
-			      fprintf(stderr, FLFMT "Some kind of wierd protocol with keybytes <%x><%x> which would be KWP%d\n", FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2, (d_l2_conn->diag_l2_kb1+128*d_l2_conn->diag_l2_kb2) );
-			      return -1;
-			  }
-			  
-		      }
-
-			/*
-			 * And wait for the address byte inverted
-			 */
-//			rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-//				cbuf, 1, 350);
-		      rv = diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-				&cbuf[0], 1, d_l2_conn->diag_l2_p3min);
-
-		      if (rv < 0) {
-	  	   	  fprintf(stderr,
-		 		FLFMT "Failed to receive what should be compliment of ECU address (compliment of %x)\n", FL, target);
-	  	  	  return rv;
-		      }
-
-		      /*
-		       * in.addr was sent 7O1; we appear to receive, echoed back from ECU,
-		       * the inverse of in.addr sent 7O1 ... but we are working here 8N1,
-		       * so need this: 
-		       */
-		      for(i=0; i< 7; i++)
-			if( in.addr & (1<<i))
-			  parity *= -1;
-		      if(parity > 0)
-			cbuf[0] += 0x80;
-
-		      if (cbuf[0] != ((~in.addr) & 0xFF) ) {
-	  	   	  fprintf(stderr,
-		 		FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
-			  return diag_iseterr(DIAG_ERR_WRONGKB);
-		      }
-
-		}
-
-		dp->state = STATE_ESTABLISHED ;
-		break;
-	case DIAG_L2_TYPE_MONINIT:
-		/* Monitor mode, don't send anything */
-		dp->state = STATE_ESTABLISHED ;
-		rv = 0;
-		break;
-	default:
-		rv = DIAG_ERR_INIT_NOTSUPP;
-		break;
-	}
-
-	if (rv < 0) {
-		free(dp);
-		return diag_iseterr(rv);
-	}
-
-	/*
-	 * Now, we want to remove any rubbish left
-	 * in inbound buffers, and wait for the bus to be
-	 * quiet for a while before we will communicate
-	 * (so that the next byte received is the first byte
-	 * of an iso14230 frame, not a middle byte)
-	 * We use 1/2 of P2max (inter response gap) or
-	 * 5 * p4max (inter byte delay), whichever is larger
-	 * a correct value to use
-	 */
-	wait_time = d_l2_conn->diag_l2_p2max / 2 ;
-	if ((d_l2_conn->diag_l2_p4max * 5) > wait_time)
-		wait_time = d_l2_conn->diag_l2_p4max * 5;
-
-	while ( diag_l1_recv (d_l2_conn->diag_link->diag_l2_dl0d, 0,
-		  data, sizeof(data), wait_time) != DIAG_ERR_TIMEOUT) ;
-
-	/* And we're done */
-	dp->state = STATE_ESTABLISHED ;
-	return 0;
-}
-
-#ifdef WIN32
-static int
-diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
-#else
-static int
-diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
-#endif
-{
+static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
 	struct diag_l2_14230 *dp;
 	struct diag_msg	msg, *tmsg;
 	uint8_t buff;
@@ -946,6 +758,7 @@ diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
 	}
 
 	return 0;
+
 }
 
 /*
@@ -957,9 +770,7 @@ diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX)
  *
  * We also wait p3 ms
  */
-static int
-diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
-{
+static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
 	int rv, csum;
 	unsigned int i;
 	size_t len;
@@ -1042,6 +853,7 @@ diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
 				FL, rv);
 
 	return rv;
+
 }
 
 /*
@@ -1057,11 +869,9 @@ diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg)
  * getting one message per frame, and we will wait a bit longer
  * for extra messages
  */
-static int
-diag_l2_proto_14230_recv(struct diag_l2_conn *d_l2_conn, int timeout,
+static int diag_l2_proto_14230_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 	void (*callback)(void *handle, struct diag_msg *msg),
-	void *handle)
-{
+	void *handle) {
 	uint8_t data[256];
 	int rv;
 	int datalen;
@@ -1090,6 +900,7 @@ diag_l2_proto_14230_recv(struct diag_l2_conn *d_l2_conn, int timeout,
 		fprintf(stderr, FLFMT "rcv callback completed\n", FL);
 
 	return 0;
+
 }
 
 static struct diag_msg *
@@ -1171,9 +982,7 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
  * Timeout, - if we don't send something to the ECU it will timeout
  * soon, so send it a keepalive message now.
  */
-static void
-diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn)
-{
+static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	struct diag_l2_14230 *dp;
 	struct diag_msg	msg;
 	uint8_t data[256];
@@ -1228,7 +1037,9 @@ diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn)
 	(void)diag_l2_recv(d_l2_conn, timeout, NULL, NULL);
 	
 	return;
+
 }
+
 static const struct diag_l2_proto diag_l2_proto_14230 = {
 	DIAG_L2_PROT_ISO14230, DIAG_L2_FLAG_FRAMED | DIAG_L2_FLAG_DATA_ONLY
 	| DIAG_L2_FLAG_KEEPALIVE | DIAG_L2_FLAG_DOESCKSUM,

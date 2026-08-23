@@ -138,8 +138,8 @@ extern "C" {
 /*
  * Prototypes
  */
-void
-l2_kw1281_data_rcv(void *handle, struct diag_msg *msg);
+void l2_kw1281_data_rcv(void *handle, struct diag_msg *msg);
+void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg *msg);
 
 #define KW_1281_TIM_MIN_P3      100
 #define KW_1281_TIM_MAX_P3      1000
