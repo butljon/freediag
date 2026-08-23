@@ -777,9 +777,7 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
 		d_l2_conn -> diag_l2_state = DIAG_L2_STATE_OPEN;
 
 	if (diag_l2_debug & DIAG_DEBUG_OPEN)
-		fprintf(stderr,
-			FLFMT "diag_l2_StartComms returns %p\n",
-				FL, d_l2_conn);
+		fprintf(stderr, FLFMT "diag_l2_StartComms returns %p\n", FL, d_l2_conn);
 
 	return d_l2_conn;
 }

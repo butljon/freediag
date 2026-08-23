@@ -583,8 +583,7 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 #endif
 					/* 1st one */
 					if (data) {
-						memcpy(data, tmsg->data,
-							(size_t)tmsg->len);
+						memcpy(data, tmsg->data, (size_t)tmsg->len);
 						*pDatalen = tmsg->len;
 					}
 				}
@@ -643,10 +642,8 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 			 * need to strip the header and checksum
 			 */
 			dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
-			rv = diag_l2_proto_14230_decode( tmsg->data,
-				tmsg->len,
-				&hdrlen, &datalen, &source, &dest,
-				dp->first_frame);
+			rv = diag_l2_proto_14230_decode(tmsg->data, tmsg->len,
+				&hdrlen, &datalen, &source, &dest, dp->first_frame);
 
 			if (rv < 0)		/* decode failure */
 				return diag_iseterr(rv);
@@ -734,7 +731,7 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
  	  }
  	  msg.len = 1;
  	  buff = DIAG_KW2K_SI_STODS;
-    	  memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
+      memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
 
 	  rv = diag_l2_send(pX, &msg);
 	  if (rv < 0) {
@@ -751,8 +748,8 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
 //	  if((tmsg->data[0] != (DIAG_KW2K_SI_STODS+0x40))
 //	    && (tmsg->len != 1)) {
 	  if(rv <0) {
-		fprintf(stderr, FLFMT "StopDiagnosticSession service failed\n", FL);
-		return -1;
+		  fprintf(stderr, FLFMT "StopDiagnosticSession service failed\n", FL);
+		  return -1;
 	  }	  
 	  dp->state = STATE_CLOSED;
 	}
@@ -839,12 +836,12 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
 
-	if(buf[3] != DIAG_KW2K_SI_TP) {
-	  printf("Out-going message check: ");
-	  for (i=0; i< len; i++)
-	    printf("<%x>", buf[i]);
-	  printf("\n");
-	}
+//xxx	if(buf[3] != DIAG_KW2K_SI_TP) {
+		printf("Out-going message check: ");
+			for (i=0; i< len; i++)
+				printf("<%x>", buf[i]);
+			printf("\n");
+//	}
 	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		buf, len, d_l2_conn->diag_l2_p4min);
 
@@ -1002,18 +999,11 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	msg.data = data;
 
 	/* Prepare the "keepalive" message */
-	if (dp->modeflags & DIAG_L2_IDLE_J1978) {
-		/* Idle using J1978 spec */
-		msg.len = 2;
-		data[0] = 1;
-		data[1] = 0;
-	} else {
-		/* Idle using ISO "Tester Present" message */
-		msg.len = 1;
-		msg.dest = 0;	/* Use default */
-		msg.src = 0;	/* Use default */
-		data[0] = DIAG_KW2K_SI_TP;
-	}
+	/* Idle using ISO "Tester Present" message */
+	msg.len = 1;
+	msg.dest = 0;	/* Use default */
+	msg.src = 0;	/* Use default */
+	data[0] = DIAG_KW2K_SI_TP;
 
 	/*
 	 * There is no point in checking for errors, or checking

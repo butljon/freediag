@@ -474,6 +474,7 @@ int cmd_vag_stopmonitor(int argc __attribute__((unused)), char **argv __attribut
 	        return CMD_FAILED;
 	    }
 	}
+
 	return CMD_OK;
 
 }
