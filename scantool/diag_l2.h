@@ -106,6 +106,7 @@ struct diag_l2_conn
 
 	uint8_t	diag_l2_destaddr;	/* Dest (ECU) */
 	uint8_t	diag_l2_srcaddr;	/* Source (US) */
+	uint8_t diag_l2_request_id;
 	/*
 	 * The following two should be in the protocol specific bit
 	 * because they only apply to ISO protocols (move at some time

@@ -291,19 +291,19 @@ void decode_value(struct diag_msg *tmsg, int i) {
  */
 static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		 int *hdrlen, int *datalen, int *source, int *dest,
-		int first_frame) {
+		int first_frame, uint8_t reqId) {
 	int dl;
+	uint8_t respId;
 
 	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
 		int i;
-		fprintf(stderr, FLFMT "decode len %d", FL, len);
+		printf("Inbound message check, len: %d, ", len);
 		for (i = 0; i < len ; i++) {
-			fprintf(stderr, " 0x%x", data[i]&0xff);
+			printf("<%x>", data[i]&0xff);
 		}
-		fprintf(stderr, "\n");
+		printf("\n");
 	}
-	
-	printf("hi0 data[0], data[1], data[2], data[3]: %x \n", data[0], data[1], data[2], data[3]);
+
 	dl = data[0] & 0x3f;
 	if (dl == 0) {
 		/* Additional length field present */
@@ -323,6 +323,7 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 				*dest = data[1];
 			if (source)
 				*source = data[2];
+			respId = data[4];
 			break;
 		case 0x00:
 			/* Addresses not supplied, additional len byte */
@@ -336,6 +337,7 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 				*dest = 0;
 			if (source)
 				*source = 0;
+			respId = data[2];
 			break;
 		case 0X40:
 			/* CARB MODE */
@@ -355,6 +357,7 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 				*dest = data[1];
 			if (source)
 				*source = data[2];
+			respId = data[3];
 			break;
 		case 0x00:
 			/* Addresses not supplied, No additional len byte */
@@ -366,6 +369,7 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 				*dest = 0;
 			if (source)
 				*source = 0;
+			respId = data[1];
 			break;
 		case 0X40:
 			/* CARB MODE */
@@ -382,14 +386,18 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 	 * And confirm data is long enough, incl cksum
 	 * If not, return saying data is incomplete so far
 	 */
-	if (len < (*hdrlen + *datalen + 1))
+	if(len < (*hdrlen + *datalen + 1))
 		return diag_iseterr(DIAG_ERR_INCDATA);
 
-	if (diag_l2_debug & DIAG_DEBUG_PROTO)
+	if(diag_l2_debug & DIAG_DEBUG_PROTO)
 	{
 		fprintf(stderr, FLFMT "decode hdrlen = %d, datalen = %d, cksum = 1\n",
 			FL, *hdrlen, *datalen);
 	}
+	if(NULL != reqId && (0x40 & reqId) != respId)
+		fprintf(stderr, FLFMT "Error: from reqId %x, expected respId %x but received %x",
+				reqId, (0x40 & reqId), respId);
+
 	return (*hdrlen + *datalen + 1);
 }
 
@@ -425,11 +433,10 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 		  break;
 		default:
 //	          printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
-	          printf("len <%x> data ", tmsg->len);
-	          for(i=0; i<tmsg->len; i++)
+	          for(i=1; i<tmsg->len; i++)
 	            printf("<%x>", tmsg->data[i]);
 	          printf("\n");
-	          for(i=0; i<tmsg->len; i++)
+	          for(i=1; i<tmsg->len; i++)
 	            printf("%c", tmsg->data[i]);
 	          printf("\n");
 	  }
@@ -610,7 +617,7 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 			 */
 			dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 			rv = diag_l2_proto_14230_decode(tmsg->data, tmsg->len,
-				&hdrlen, &datalen, &source, &dest, dp->first_frame);
+				&hdrlen, &datalen, &source, &dest, dp->first_frame, d_l2_conn->diag_l2_request_id);
 
 			if (rv < 0)		/* decode failure */
 				return diag_iseterr(rv);
@@ -799,7 +806,7 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
 //xxx	if(buf[3] != DIAG_KW2K_SI_TP) {
-		printf("Out-going message check: ");
+		printf("Outbound message check: ");
 			for (i=0; i< len; i++)
 				printf("<%x>", buf[i]);
 			printf("\n");
@@ -964,6 +971,7 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	msg.dest = d_l2_conn->diag_l2_destaddr;
 	data[0] = DIAG_KW2K_SI_TP;
 	data[1] = 0x01;
+	d_l2_conn->diag_l2_request_id = data[0];
 
 	/*
 	 * There is no point in checking for errors, or checking

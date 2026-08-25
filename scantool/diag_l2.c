@@ -156,34 +156,6 @@ static int diag_l2_rmlink(struct diag_l2_link *d) {
 }
 
 /*
- *
- * remove a L2 connection from our list
- * - up to the caller to have shut it down properly first
- * diag_l2_rmconn XXX Currently not used.
- */
-static int diag_l2_rmconn(struct diag_l2_conn *d) {
-	struct diag_l2_conn	*d_l2_conn = diag_l2_connections;
-	struct diag_l2_conn	*d_l2_last_conn = NULL;
-
-	while (d_l2_conn)
-	{
-		if (d_l2_conn == d)
-		{
-			/* Remove it from list */
-			if (d_l2_last_conn)
-				d_l2_last_conn->next = d->next ;
-			else
-				diag_l2_connections = d->next;
-
-			break;
-		}
-		d_l2_last_conn = d_l2_conn;
-		d_l2_conn = d_l2_conn->next;
-	}
-	return 0;
-}
-
-/*
  * Called regularly to check timeouts etc (call at least once per
  * second)
  * Note: This is called from a signal handler.
@@ -611,17 +583,13 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		while (diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0,
 			  cbuf, sizeof(cbuf), wait_time) != DIAG_ERR_TIMEOUT);
 
-		// Connection established:
-		dp->state = STATE_ESTABLISHED;
-		dp->master = 0;
-
 		/*
 		 * diag_l2_p3max is used later for firing stay-alive timeouts, see diag_l2.c, and
 		 * for monitoring in KWP2x. For KWP2x, the full diag_l2_p3max * 2/3
 		 * (= 10/3 secs) appears too long between stay-alive pings, so
 		 * increase the ping frequency:
 		 */
-		d_l2_conn->diag_l2_p3max = ISO_14230_TIM_MAX_P3 / 5;
+		d_l2_conn->diag_l2_p3max = ISO_14230_TIM_MAX_P3/5;
 
         // Start diagnostic session
     	msg.len = 2;
@@ -631,6 +599,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
      	}
     	cbuf[0] = DIAG_KW2K_SI_STADS;
     	cbuf[1] = 0x89;
+    	d_l2_conn->diag_l2_request_id = cbuf[0];
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
     	msg.src = d_l2_conn->diag_l2_srcaddr;
     	msg.dest = d_l2_conn->diag_l2_destaddr;
@@ -643,7 +612,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
     	 * connection
     	 */
-    	diag_os_millisleep(d_l2_conn->diag_l2_p3min);
+  //zzz  	diag_os_millisleep(d_l2_conn->diag_l2_p3min);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -651,7 +620,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	}
     	free(msg.data);
 
-    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+   //aaa 	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 
     	msg.len = 2;
@@ -660,11 +629,12 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
      	    return(DIAG_ERR_NOMEM);
      	}
     	cbuf[0] = DIAG_KW2K_SI_REID;
-    // could try without 0x9B here: 2nd parameter seems to optional anyway
+    // could try without 0x9B here: 2nd parameter seems optional anyway
     	cbuf[1] = 0x9B;
+    	d_l2_conn->diag_l2_request_id = cbuf[0];
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
 
-    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    //zzz	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -672,8 +642,12 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	}
     	free(msg.data);
 
-    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	//aaa 	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+
+		// Connection established:
+		dp->state = STATE_ESTABLISHED;
+		dp->master = 0;
 
 	}
 
@@ -787,8 +761,8 @@ struct diag_l2_conn * diag_l2_StartCommunications(struct diag_l0_device *dl0d, u
 	 */
 	if ((reusing == 0) && d_l2_conn) {
 		/* And attach connection info to our main list */
-		d_l2_conn->next = diag_l2_connections ;
-		diag_l2_connections = d_l2_conn ;
+		d_l2_conn->next = diag_l2_connections;
+		diag_l2_connections = d_l2_conn;
 
 		diag_l2_conbyid[target] = d_l2_conn;
 
