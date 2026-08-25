@@ -303,6 +303,7 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		fprintf(stderr, "\n");
 	}
 	
+	printf("hi0 data[0], data[1], data[2], data[3]: %x \n", data[0], data[1], data[2], data[3]);
 	dl = data[0] & 0x3f;
 	if (dl == 0) {
 		/* Additional length field present */
@@ -407,8 +408,8 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 
 	  switch (tmsg->data[0]) {
 
-	  case (DIAG_KW2K_SI_STADS & 0x40):
-	  case (DIAG_KW2K_SI_REID & 0x40):
+	  case (DIAG_KW2K_SI_STADS):
+	  case (DIAG_KW2K_SI_REID):
 		  break;
 
 		case DIAG_KW2K_RC_RDDBLI:
@@ -439,7 +440,7 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 }
 
 /*
- * Internal receive function (does all the message building, but doesn't
+ * Internal receive function does all the message building, but doesn't
  * do call back, returns the complete message, hasn't removed checksum
  * and header info
  *
@@ -460,8 +461,6 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 #define ST_STATE1	1	/* Start */
 #define ST_STATE2	2	/* Interbyte */
 #define ST_STATE3	3	/* Inter message */
-
-	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
 	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 
@@ -507,27 +506,18 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 		}
 
 		/* Receive data into the buffer */
-#if FULL_DEBUG
-		fprintf(stderr, FLFMT "before recv, state %d timeout %d, rxoffset %d\n",
-			FL, state, tout, dp->rxoffset);
-#endif
 		/*
 		 * In l1_doesl2frame mode, we get full frames, so we don't
 		 * do the read in state2
 		 */
-		if ( (state == ST_STATE2) && l1_doesl2frame )
+		if((state == ST_STATE2) && l1_doesl2frame)
 			rv = DIAG_ERR_TIMEOUT;
 		else
 			rv = diag_l1_recv(d_l2_conn->diag_link->diag_l2_dl0d, 0,
-				&dp->rxbuf[dp->rxoffset],
-				sizeof(dp->rxbuf) - dp->rxoffset,
+				&dp->rxbuf[dp->rxoffset], sizeof(dp->rxbuf) - dp->rxoffset,
 				tout);
-#if FULL_DEBUG
-		fprintf(stderr,
-			FLFMT "after recv, rv %d rxoffset %d\n", FL, rv, dp->rxoffset);
-#endif
 
-		if (rv == DIAG_ERR_TIMEOUT) {
+		if(rv == DIAG_ERR_TIMEOUT) {
 			/* Timeout, end of message, or end of responses */
 			switch (state) {
 			case ST_STATE1:
@@ -535,7 +525,7 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 				 * 1st read, if we got 0 bytes, just return
 				 * the timeout error
 				 */
-				if (dp->rxoffset == 0)
+				if(dp->rxoffset == 0)
 					break;
 				/*
 				 * Otherwise see if there are more bytes in
@@ -558,14 +548,6 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 				 */
 				diag_l2_addmsg(d_l2_conn, tmsg);
 				if (d_l2_conn->diag_msg == tmsg) {
-#if FULL_DEBUG
-					int i;
-					fprintf(stderr, FLFMT "Copying %d bytes to data\n",
-						FL, tmsg->len);
-					for (i=0; i<tmsg->len; i++)
-						fprintf(stderr, "0x%x ",tmsg->data[i]);
-					fprintf(stderr, "\n");
-#endif
 					/* 1st one */
 					if (data) {
 						memcpy(data, tmsg->data, (size_t)tmsg->len);
@@ -661,12 +643,6 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 
 				tmsg = amsg; /* Finish processing this one */
 			}
-
-#if FULL_DEBUG
-			fprintf(stderr,
-			FLFMT "msg %x decode/rejig done rv %d hdrlen %d datalen %d source %02x dest %02x\n",
-				FL, tmsg, rv, hdrlen, datalen, source, dest);
-#endif
 
 			if ((tmsg->data[0] & 0xC0) == 0xC0) {
 				tmsg->fmt = DIAG_FMT_ISO_FUNCADDR;
@@ -983,10 +959,11 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 
 	// Prepare the "keepalive" message
 	// Idle using ISO "Tester Present" message
-	msg.len = 1;
+	msg.len = 2;
 	msg.src = d_l2_conn->diag_l2_srcaddr;
 	msg.dest = d_l2_conn->diag_l2_destaddr;
 	data[0] = DIAG_KW2K_SI_TP;
+	data[1] = 0x01;
 
 	/*
 	 * There is no point in checking for errors, or checking

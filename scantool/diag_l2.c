@@ -418,13 +418,14 @@ static target_type vAGToIso14230(target_type in) {
    * which is translated here to 0x03 for the 5BAUD init
    *
    */
-	if(DIAG_VAG_ECU_ENGINE==in)
-		return DIAG_KW2K_ISO14230_ECU_ENGINE;
-	if(DIAG_VAG_ECU_ABS==in)
-		return DIAG_KW2K_ISO14230_ECU_ABS;
-	else {
-		fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
-		return in;
+	switch(in) {
+		case DIAG_VAG_ECU_ENGINE:
+			return DIAG_KW2K_ISO14230_ECU_ENGINE;
+		case DIAG_VAG_ECU_ABS:
+			return DIAG_KW2K_ISO14230_ECU_ABS;
+		default:
+			fprintf(stderr, FLFMT "don't know a translation yet for <%x> - please add one here!\n", FL, in);
+			return in;
 	}
 
 }
@@ -581,18 +582,18 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	    /*
 	     * in.addr was sent 7O1; we appear to receive, echoed back from ECU,
 	     * the inverse of in.addr sent 7O1 ... but we are working here 8N1,
-	     * so need this:
+	     * so apparently need this:
 	     */
 	    for(i=0; i<7; i++)
 	    	if(in.addr & (1<<i))
 	    		parity *= -1;
-	      	if(parity > 0)
-	      		cbuf[0] += 0x80;
+	    if(parity > 0)
+	    	cbuf[0] |= 0x80;
 
-	      	if (cbuf[0] != ((~in.addr) & 0xFF) ) {
-	      		fprintf(stderr, FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
-	      		return diag_iseterr(DIAG_ERR_WRONGKB);
-	      	}
+	    if (cbuf[0] != ((~in.addr) & 0xFF) ) {
+	    	fprintf(stderr, FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
+	    	return diag_iseterr(DIAG_ERR_WRONGKB);
+	    }
 
 	    /*
 		 * Now,remove any rubbish left
@@ -628,7 +629,6 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
      	    fprintf(stderr, FLFMT "diag_calloc failed for KWPx\n", FL);
      	    return(DIAG_ERR_NOMEM);
      	}
-
     	cbuf[0] = DIAG_KW2K_SI_STADS;
     	cbuf[1] = 0x89;
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
@@ -653,13 +653,12 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 
     	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-//zzz check this is DIAG_KW2K_SI_STADS & 0x40
+
     	msg.len = 2;
      	if (diag_calloc(&msg.data, msg.len)) {
      	    fprintf(stderr, FLFMT "diag_calloc failed for KWPx\n", FL);
      	    return(DIAG_ERR_NOMEM);
      	}
-
     	cbuf[0] = DIAG_KW2K_SI_REID;
     // could try without 0x9B here: 2nd parameter seems to optional anyway
     	cbuf[1] = 0x9B;
@@ -675,7 +674,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 
     	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-    	//zzz check this is DIAG_KW2K_SI_REID & 0x40
+
 	}
 
 	if((d_l2_conn->diag_l2_kb1 != 0x01 || d_l2_conn->diag_l2_kb2 != 0x0a) && d_l2_conn->diag_l2_kb2 != 0x0f) {
