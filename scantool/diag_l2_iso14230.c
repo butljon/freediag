@@ -702,7 +702,7 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
  	  msg.dest = pX->diag_l2_destaddr;
  	  buff = DIAG_KW2K_SI_STODS;
       memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
-
+      pX->diag_l2_request_id = buff;
 
 	  rv = diag_l2_send(pX, &msg);
 	  if (rv < 0) {
