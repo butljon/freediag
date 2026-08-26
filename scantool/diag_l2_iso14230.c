@@ -432,7 +432,7 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 		  printf("\n");
 		  break;
 		default:
-	         printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
+	   //      printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
 	          for(i=1; i<tmsg->len; i++)
 	            printf("<%x>", tmsg->data[i]);
 	          printf("\n");

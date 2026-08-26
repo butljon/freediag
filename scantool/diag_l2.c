@@ -567,6 +567,10 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	    	return diag_iseterr(DIAG_ERR_WRONGKB);
 	    }
 
+		// Connection established:
+		dp->state = STATE_ESTABLISHED;
+		dp->master = 0;
+
 	    /*
 		 * Now,remove any rubbish left
 		 * in inbound buffers, and wait for the bus to be
@@ -620,7 +624,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	}
     	free(msg.data);
 
-   //aaa 	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 
     	msg.len = 2;
@@ -642,12 +646,8 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	}
     	free(msg.data);
 
-    	//aaa 	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-
-		// Connection established:
-		dp->state = STATE_ESTABLISHED;
-		dp->master = 0;
 
 	}
 
