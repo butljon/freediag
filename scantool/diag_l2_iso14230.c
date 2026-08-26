@@ -394,9 +394,9 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		fprintf(stderr, FLFMT "decode hdrlen = %d, datalen = %d, cksum = 1\n",
 			FL, *hdrlen, *datalen);
 	}
-	if(NULL != reqId && (0x40 & reqId) != respId)
-		fprintf(stderr, FLFMT "Error: from reqId %x, expected respId %x but received %x",
-				reqId, (0x40 & reqId), respId);
+	if(0 != reqId && (0x40 | reqId) != respId)
+		fprintf(stderr, FLFMT "Error: from reqId %x, expected respId %x but received %x\n",
+				FL, reqId, (0x40 | reqId), respId);
 
 	return (*hdrlen + *datalen + 1);
 }
@@ -432,7 +432,7 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 		  printf("\n");
 		  break;
 		default:
-//	          printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
+	         printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
 	          for(i=1; i<tmsg->len; i++)
 	            printf("<%x>", tmsg->data[i]);
 	          printf("\n");
@@ -948,19 +948,19 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
  * soon, so send it a keepalive message now.
  */
 static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
-	struct diag_l2_14230 *dp;
+	struct diag_l2_kw1281 *dp;
 	struct diag_msg	msg;
 	uint8_t data[256];
 	int timeout;
 
-	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
-
-	if(dp->state < STATE_ESTABLISHED)
+	dp = (struct diag_l2_kw1281 *)d_l2_conn->diag_l2_proto_data;
+	
+	if(dp->state < STATE_ESTABLISHED || dp->master)
 		return;
-
+	
 	// XXX fprintf not async-signal-safe
 	if (diag_l2_debug & DIAG_DEBUG_TIMER)
-		fprintf(stderr, FLFMT "timeout impending for %p type %d\n", FL, d_l2_conn, dp->type);
+		fprintf(stderr, FLFMT "timeout impending for %p target %d\n", FL, d_l2_conn, dp->target);
 
 	msg.data = data;
 
@@ -981,7 +981,6 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 
 	/* Send it, important to use l2_send as it updates the timers */
 	(void)diag_l2_send(d_l2_conn, &msg);
-
 	/*
 	 * Get the response in p2max, we allow longer, and even
 	 * longer on "smart" L2 interfaces
