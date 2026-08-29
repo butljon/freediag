@@ -534,10 +534,10 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	if(d_l2_conn->diag_l2_kb2 == 0x0f) {
 	// (VAG) KWP2xxx
 		// perform some KWP2xxx consistency checks, see ISO 14230 */
-		    if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
-			    fprintf(stderr, FLFMT "Wierd KWP2xxx protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
-			    		FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
-			    return -1;
+		if(!(d_l2_conn->diag_l2_kb1 & (1<<6)) || (d_l2_conn->diag_l2_kb1 & (1<<5)) == (d_l2_conn->diag_l2_kb1 & (1<<4))) {
+			fprintf(stderr, FLFMT "Wierd KWP2xxx protocol with keywords KB1, KB2: <%x><%x> which is not really allowed according to ISO-14230\n",
+					FL, d_l2_conn->diag_l2_kb1, d_l2_conn->diag_l2_kb2);
+			return -1;
 		}
 		printf("VAG KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_ISO14230);
@@ -616,7 +616,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
     	 * connection
     	 */
-  //zzz  	diag_os_millisleep(d_l2_conn->diag_l2_p3min);
+//    	diag_os_millisleep(400);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -638,7 +638,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	d_l2_conn->diag_l2_request_id = cbuf[0];
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
 
-    //zzz	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	diag_os_millisleep(400);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);

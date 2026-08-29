@@ -979,6 +979,7 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	 * from here
 	 */
 
+	diag_os_millisleep(400);
 	/* Send it, important to use l2_send as it updates the timers */
 	(void)diag_l2_send(d_l2_conn, &msg);
 	/*
@@ -991,6 +992,7 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 		if (timeout < 100)
 			timeout = 100;
 	}
+	diag_os_millisleep(30);
 	(void)diag_l2_recv(d_l2_conn, timeout, NULL, NULL);
 	
 	return;
