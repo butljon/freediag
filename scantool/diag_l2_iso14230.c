@@ -358,6 +358,10 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 			if (source)
 				*source = data[2];
 			respId = data[3];
+			printf("hi <%x><%x><%x><%x>", data[0], data[1], data[2], data[3]);
+			for(int j=4; j<4+dl; j++)
+				printf("<%x>", data[j]);
+			printf("\n");
 			break;
 		case 0x00:
 			/* Addresses not supplied, No additional len byte */
@@ -992,7 +996,8 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 		if (timeout < 100)
 			timeout = 100;
 	}
-	diag_os_millisleep(30);
+//zzz
+	diag_os_millisleep(400);
 	(void)diag_l2_recv(d_l2_conn, timeout, NULL, NULL);
 	
 	return;
