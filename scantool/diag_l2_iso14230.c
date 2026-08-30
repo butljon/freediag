@@ -295,14 +295,14 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 	int dl;
 	uint8_t respId;
 
-	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
+//	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
 		int i;
 		printf("Inbound message check, len: %d, ", len);
 		for (i = 0; i < len ; i++) {
 			printf("<%x>", data[i]&0xff);
 		}
 		printf("\n");
-	}
+//	}
 
 	dl = data[0] & 0x3f;
 	if (dl == 0) {
@@ -358,10 +358,6 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 			if (source)
 				*source = data[2];
 			respId = data[3];
-			printf("hi <%x><%x><%x><%x>", data[0], data[1], data[2], data[3]);
-			for(int j=4; j<4+dl; j++)
-				printf("<%x>", data[j]);
-			printf("\n");
 			break;
 		case 0x00:
 			/* Addresses not supplied, No additional len byte */
@@ -420,29 +416,29 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 
 	  switch (tmsg->data[0]) {
 
-	  case (DIAG_KW2K_SI_STADS):
-	  case (DIAG_KW2K_SI_REID):
+//	  case (DIAG_KW2K_SI_STADS):
+//	  case (DIAG_KW2K_SI_REID):
+	  case (DIAG_KW2K_RC_NR):
 		  break;
 
-		case DIAG_KW2K_RC_RDDBLI:
+	  case DIAG_KW2K_RC_RDDBLI:
 		  for(i=2; i< tmsg->len; i+=3) {
 //		    if(tmsg->data[i] != 0x25) {
-		    printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
-		    printf("sensor bytes: <%x>", tmsg->data[i+1]);
-		    printf("<%x>\n", tmsg->data[i+2]);
-		    decode_value(tmsg, i);
+			  printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
+			  printf("sensor bytes: <%x>", tmsg->data[i+1]);
+			  printf("<%x>\n", tmsg->data[i+2]);
+			  decode_value(tmsg, i);
 //		    }
 		  }
-		  printf("\n");
 		  break;
-		default:
+	  default:
 	   //      printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
-	          for(i=1; i<tmsg->len; i++)
-	            printf("<%x>", tmsg->data[i]);
-	          printf("\n");
-	          for(i=1; i<tmsg->len; i++)
-	            printf("%c", tmsg->data[i]);
-	          printf("\n");
+	//	  for(i=1; i<tmsg->len; i++)
+	//		  printf("<%x>", tmsg->data[i]);
+	//	  printf("\n");
+		  for(i=1; i<tmsg->len; i++)
+			  printf("%c", tmsg->data[i]);
+		  printf("\n");
 	  }
 	  tmsg = tmsg->next;
 	}
