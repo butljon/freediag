@@ -268,14 +268,18 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 	int dl;
 	uint8_t respId;
 
-//	if (diag_l2_debug & DIAG_DEBUG_PROTO) {
+	if (data[3] != DIAG_KW2K_SI_STADS_OK && !(data[3] == DIAG_KW2K_RC_NR 
+		&& data[4] == DIAG_KW2K_SI_REID && data[5] == DIAG_KW2K_RC_RCR_RP) 
+		&& data[3] != DIAG_KW2K_SI_REID_OK
+		&& data[3] != DIAG_KW2K_SI_TP_OK && data[3] != DIAG_KW2K_SI_STODS_OK) {
+			
 		int i;
 		printf("Inbound message check, len: %d, ", len);
 		for (i = 0; i < len ; i++) {
 			printf("<%x>", data[i]&0xff);
 		}
 		printf("\n");
-//	}
+	}
 
 	dl = data[0] & 0x3f;
 	if (dl == 0) {
@@ -367,11 +371,12 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		fprintf(stderr, FLFMT "decode hdrlen = %d, datalen = %d, cksum = 1\n",
 			FL, *hdrlen, *datalen);
 	}
-	if(0 != reqId && (0x40 | reqId) != respId)
+	if(0 != reqId && (0x40 | reqId) != respId 
+		&& !(DIAG_KW2K_SI_REID == reqId && DIAG_KW2K_RC_NR== respId))
 		fprintf(stderr, FLFMT "Error: from reqId %x, expected respId %x but received %x\n",
 				FL, reqId, (0x40 | reqId), respId);
 
-	return (*hdrlen + *datalen + 1);
+	return *hdrlen + *datalen + 1;
 }
 
 /* basic ISO14230 callback routine */
@@ -386,36 +391,29 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 
 	tmsg = msg;
 	while(tmsg) {
+		switch (tmsg->data[0]) {
+			case DIAG_KW2K_SI_STADS_OK:
+	  		case DIAG_KW2K_SI_TP_OK:
+	  		case DIAG_KW2K_RC_NR:
+			case DIAG_KW2K_SI_STODS_OK:
+		  		break;
 
-	  switch (tmsg->data[0]) {
-
-//	  case (DIAG_KW2K_SI_STADS):
-//	  case (DIAG_KW2K_SI_REID):
-	  case (DIAG_KW2K_RC_NR):
-		  break;
-
-	  case DIAG_KW2K_RC_RDDBLI:
-		  for(i=2; i< tmsg->len; i+=3) {
-//		    if(tmsg->data[i] != 0x25) {
-			  printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
-			  printf("sensor bytes: <%x>", tmsg->data[i+1]);
-			  printf("<%x>\n", tmsg->data[i+2]);
-			  decode_value(tmsg, i);
-//		    }
-		  }
-		  break;
-	  default:
-	   //      printf("fmt <%x> type <%x> dest <%x> src <%x> len <%x> data ", tmsg->fmt, tmsg->type, tmsg->dest, tmsg->src, tmsg->len);
-	//	  for(i=1; i<tmsg->len; i++)
-	//		  printf("<%x>", tmsg->data[i]);
-	//	  printf("\n");
-		  for(i=1; i<tmsg->len; i++)
-			  printf("%c", tmsg->data[i]);
-		  printf("\n");
-	  }
-	  tmsg = tmsg->next;
+	  		case DIAG_KW2K_RC_RDDBLI:
+		  		for(i=2; i< tmsg->len; i+=3) {
+					printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
+			  		printf("sensor bytes: <%x>", tmsg->data[i+1]);
+			  		printf("<%x>\n", tmsg->data[i+2]);
+			  		decode_value(tmsg, i);
+				}
+		  		break;
+			
+			default:
+		    	for(i=1; i<tmsg->len; i++)
+		  	  		printf("%c", tmsg->data[i]);
+		    	printf("\n");
+	  	}
+	  	tmsg = tmsg->next;
 	}
-
 	return;	
 }
 
@@ -592,6 +590,12 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 			rv = diag_l2_proto_14230_decode(tmsg->data, tmsg->len,
 				&hdrlen, &datalen, &source, &dest, dp->first_frame, d_l2_conn->diag_l2_request_id);
 
+//zzz			if(source != dp->dstaddr || dest != dp->srcaddr) {
+//			fprintf(stderr, FLFMT "Connection (src, dest): (%d, %d), but received message for (src, dest): (%d, %d)\n",
+//					FL, dp->srcaddr, dp->dstaddr, source, dest);
+//					rv = -1;
+//			}
+				
 			if (rv < 0)		/* decode failure */
 				return diag_iseterr(rv);
 
@@ -778,12 +782,13 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 	if (dp->state == STATE_ESTABLISHED)
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
-//xxx	if(buf[3] != DIAG_KW2K_SI_TP) {
-		printf("Outbound message check: ");
+	if(buf[3] != DIAG_KW2K_SI_TP && buf[3] != DIAG_KW2K_SI_STADS && buf[3] != DIAG_KW2K_SI_REID
+		&& buf[3] != DIAG_KW2K_SI_STODS) {
+		printf("Outbound message check, len: %d, ", len);
 			for (i=0; i< len; i++)
 				printf("<%x>", buf[i]);
 			printf("\n");
-//	}
+	}
 	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		buf, len, d_l2_conn->diag_l2_p4min);
 

@@ -98,7 +98,10 @@ extern "C" {
  */
 #define DIAG_KW2K_RC_NR		0x7F	/* negative Response */
 #define DIAG_KW2K_RC_RDDBLI	0x61	/* readDataByLocalId RSP */
-
+#define DIAG_KW2K_SI_STADS_OK	0x50	/* startDiagnosticSession */
+#define DIAG_KW2K_SI_REID_OK	0x5A	/* readEcuId */
+#define DIAG_KW2K_SI_TP_OK		0x7E	/* testerPresent */
+#define DIAG_KW2K_SI_STODS_OK	0x60	/* stopDiagnosticSession */
 
 /*
  * Service response codes

@@ -220,7 +220,7 @@ int cmd_vag_request(int argc __attribute__((unused)), char **argv __attribute__(
 
 int cmd_vag_reqdtc(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
 
-	char buff[4], *buff2[5];
+	char buff[4], *buff2[3];
 
 	if(argc != 1) {
 		fprintf(stderr, FLFMT "reqdtc does not support command line parameters\n", FL);
@@ -230,41 +230,49 @@ int cmd_vag_reqdtc(int argc __attribute__((unused)), char **argv __attribute__((
 	if(IS_KW1281(global_l2_conn)) {
 	    snprintf(buff, 4, "%d", DIAG_VAG_CMD_DTC_RQST);
 	    buff2[1] = buff;
-
-        return cmd_vag_request(2, buff2);
+		
+		return cmd_vag_request(2, buff2);
 	}
+	
 	if(IS_KWP2K(global_l2_conn)) {
-	    snprintf(buff, 4, "%d", DIAG_KW2K_SI_RDTCBS);
-	    buff2[1] = malloc(4);
-	    memcpy(buff2[1], &buff[0], 4);
-	    snprintf(buff, 4, "%d", 2);
-	    buff2[2] = malloc(4);
-	    memcpy(buff2[2], &buff[0], 4);
-	    snprintf(buff, 4, "%d", 255);
-	    buff2[3] = malloc(4);
-	    memcpy(buff2[3], &buff[0], 4);
-	    snprintf(buff, 4, "%d", 255);
-	    buff2[4] = malloc(4);
-	    memcpy(buff2[4], &buff[0], 4);
-	  
-	    return cmd_vag_request(5, buff2);
+	    snprintf(buff, 4, "%d", DIAG_KW2K_SI_RDTC);
+	    buff2[1] = malloc(1);
+	    memcpy(buff2[1], &buff[0], 1);
+	    snprintf(buff, 4, "%d", 0xFF);
+	    buff2[2] = malloc(1);
+		memcpy(buff2[2], &buff[0], 1);
+		
+		return cmd_vag_request(3, buff2);
 	}
-
+	
 }
 
 int cmd_vag_cleardtc(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
 
-	char buff[4], *buff2[2];
+	char buff[4], *buff2[3];
 
 	if(argc != 1) {
 		fprintf(stderr, FLFMT "cleardtc does not support command line parameters\n", FL);
 		return CMD_FAILED;
 	}
 
-	snprintf(buff, 4, "%d", DIAG_VAG_CMD_DTC_CLEAR);
-	buff2[1] = buff;
+	if(IS_KW1281(global_l2_conn)) {
+		snprintf(buff, 4, "%d", DIAG_VAG_CMD_DTC_CLEAR);
+		buff2[1] = buff;
+		
+		return cmd_vag_request(2, buff2);
+	}
 
-	return cmd_vag_request(2, buff2);
+	if(IS_KWP2K(global_l2_conn)) {
+	    snprintf(buff, 4, "%d", DIAG_KW2K_SI_CDI);
+	    buff2[1] = malloc(1);
+	    memcpy(buff2[1], &buff[0], 1);
+	    snprintf(buff, 4, "%d", 0xFF);
+	    buff2[2] = malloc(1);
+		memcpy(buff2[2], &buff[0], 1);
+		
+		return cmd_vag_request(3, buff2);
+	}
 
 }
 
