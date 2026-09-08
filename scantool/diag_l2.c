@@ -41,6 +41,8 @@
 #include "diag_l2.h"
 #include "diag_vag.h"
 #include "diag_iso14230.h"
+#include "diag_l2_iso14230.h"
+#include "diag_l2_kw1281.h"
 #include "diag_l2_iso9141.h"
 #include "scantool_cli.h"
 
@@ -417,16 +419,9 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	int rv = 0, i, wait_time, parity=1;
 
 	struct diag_l1_initbus_args in;
-	struct diag_l2_kw1281 *dp;
+	struct diag_l2_kw1281 *dp_kw1281;
+	struct diag_l2_14230 *dp_iso14230;
 	struct diag_msg	msg;
-
-	if(diag_calloc(&dp, 1)) {
-	    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
-	    return DIAG_ERR_NOMEM;
-	}
-
-	d_l2_conn->diag_l2_proto_data = dp;
-	dp->monitor = NULL;
 
 	/*
 	 * diag_l2_p3max is used later for firing stay-alive timeouts, see diag_l2.c, and
@@ -443,12 +438,6 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	 */
 
 	d_l2_conn->diag_l2_p3min = KW_1281_TIM_MIN_P3;
-	/*
-	 * going to use dp->master later with timeout:
-	 * dp->master = 1 means "we are busy with the line", thus
-	 * only do a timeout if(!dp->master)
-	 */
-	dp->master = 1;
 
 	// Override "set speed" value; we will probe with 9600 baud
 	set.speed = 9600;
@@ -515,6 +504,16 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	if(d_l2_conn->diag_l2_kb1 == 0x01 && d_l2_conn->diag_l2_kb2 == 0x0a) {
         // (VAG) KW1281
 		printf("VAG KW1281 protocol\n");
+
+		if(diag_calloc(&dp_kw1281, 1)) {
+		    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
+		    return DIAG_ERR_NOMEM;
+		}
+		d_l2_conn->diag_l2_proto_data = dp_kw1281;
+		dp_kw1281->monitor = NULL;
+		dp_kw1281->master = 1;
+		dp_kw1281->state = STATE_CONNECTING;
+				
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_KW1281);
 	/*
 	 * Now receive the first 3 messages
@@ -526,9 +525,9 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	  	    return rv;
 		}
 
-		// Connection established:
-		dp->state = STATE_ESTABLISHED;
-		dp->master = 0;
+		dp_kw1281->state = STATE_ESTABLISHED;
+		dp_kw1281->master = 0;
+		
 	}
 
 	if(d_l2_conn->diag_l2_kb2 == 0x0f) {
@@ -540,6 +539,14 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 			return -1;
 		}
 		printf("VAG KWP%d protocol\n", 1920+(uint8_t)d_l2_conn->diag_l2_kb1);
+		
+		if(diag_calloc(&dp_iso14230, 1)) {
+		    fprintf(stderr, FLFMT "diag_calloc failed for KWP2xxx\n", FL);
+		    return DIAG_ERR_NOMEM;
+		}
+		d_l2_conn->diag_l2_proto_data = dp_iso14230;
+		dp_iso14230->state = STATE_CONNECTING;
+				
 		diag_l2_assign_l2_protocol(d_l2_conn, DIAG_L2_PROT_ISO14230);
 		d_l2_conn->diag_l2_destaddr = vAGToIso14230(d_l2_conn->diag_l2_destaddr);
 
@@ -566,7 +573,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 	    	fprintf(stderr, FLFMT "Received <%x> which should be compliment of ECU address (i.e. compliment of %x)\n", FL, cbuf[0], target);
 	    	return diag_iseterr(DIAG_ERR_WRONGKB);
 	    }
-
+		
 	    /*
 		 * Now,remove any rubbish left
 		 * in inbound buffers, and wait for the bus to be
@@ -590,7 +597,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		 * increase the ping frequency:
 		 */
 		d_l2_conn->diag_l2_p3max = ISO_14230_TIM_MAX_P3/5;
-
+		
         // Start diagnostic session
     	msg.len = 2;
      	if (diag_calloc(&msg.data, msg.len)) {
@@ -612,7 +619,6 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	 * fire off an DIAG_KW2K_SI_TP message which will then disturb the still being initialised
     	 * connection
     	 */
-//    	diag_os_millisleep(400);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
@@ -634,20 +640,18 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
     	d_l2_conn->diag_l2_request_id = cbuf[0];
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
 
-    	diag_os_millisleep(400);
+		diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_send(d_l2_conn, &msg);
     	if(rv < 0) {
     		fprintf(stderr, FLFMT "Failed to send request\n", FL);
     		return CMD_FAILED;
     	}
     	free(msg.data);
-//zzz
-    	diag_os_millisleep(500);
-    	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 
-		// Connection established:
-		dp->state = STATE_ESTABLISHED;
-		dp->master = 0;
+		diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+    	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+		
+		dp_iso14230->state = STATE_ESTABLISHED;
 		
 	}
 
@@ -656,6 +660,9 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 			return -1;
 	}
 
+	// Connection established:
+	global_l2_conn = d_l2_conn;
+		
 	return 0;
 
 }

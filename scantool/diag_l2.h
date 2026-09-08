@@ -391,20 +391,6 @@ struct diag_l2_proto {
 
 int diag_l2_add_protocol(const struct diag_l2_proto *l2proto);
 
-struct diag_l2_kw1281
-{
-	uint8_t srcaddr;	// Src address used, normally 0xF1 (tester)
-	uint8_t target;	// Target address used, normally 0x33 (ISO9141)
-	uint8_t seq_nr;	/* Sequence number */
-	uint8_t master;	/* Master flag, 1 = us, 0 = ECU */
-
-
-	uint8_t rxbuf[MAXRBUF];	/* Receive buffer, for building message in */
-	int rxoffset;		/* Offset to write into buffer */
-	uint8_t state;
-	struct monitor_type *monitor;
-};
-
 #if defined(__cplusplus)
 }
 #endif

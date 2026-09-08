@@ -36,35 +36,8 @@
 #include "diag_l2.h"
 #include "diag_err.h"
 #include "diag_iso14230.h"
-#include "diag_l2_iso9141.h"
 #include "diag_vag.h"
-
 #include "diag_l2_iso14230.h" /* prototypes for this file */
-
-/*
- * ISO 14230 specific data
- */
-struct diag_l2_14230 {
-	uint8_t type;		/* FAST/SLOW/CARB */
-	
-	uint8_t srcaddr;	/* Src address used */
-	uint8_t dstaddr;	/* Dest address used (for connect) */
-	uint16_t modeflags;	/* Flags */
-
-	uint8_t state;
-
-	uint8_t first_frame;	/* First frame flag, used mainly for
-					monitor mode when we need to find
-					out whether we see a CARB or normal
-					init */
-
-	uint8_t rxbuf[MAXRBUF];	/* Receive buffer, for building message in */
-	int rxoffset;		/* Offset to write into buffer */
-};
-
-#define STATE_CLOSED	  0	/* Established comms */
-#define STATE_CONNECTING  1	/* Connecting */
-#define STATE_ESTABLISHED 2	/* Established */
 
 /*
  * Useful internal routines
@@ -948,29 +921,29 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
  * soon, so send it a keepalive message now.
  */
 static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
-	struct diag_l2_kw1281 *dp;
+	struct diag_l2_14230 *dp;
 	struct diag_msg	msg;
 	uint8_t data[256];
 	int timeout;
 
-	dp = (struct diag_l2_kw1281 *)d_l2_conn->diag_l2_proto_data;
+	dp = (struct diag_l2_14230 *)d_l2_conn->diag_l2_proto_data;
 	
-	if(dp->state < STATE_ESTABLISHED || dp->master)
+	if(dp->state < STATE_ESTABLISHED)
 		return;
 	
 	// XXX fprintf not async-signal-safe
 	if (diag_l2_debug & DIAG_DEBUG_TIMER)
-		fprintf(stderr, FLFMT "timeout impending for %p target %d\n", FL, d_l2_conn, dp->target);
+		fprintf(stderr, FLFMT "timeout impending for %p target %d\n", FL, d_l2_conn, 
+			d_l2_conn->diag_l2_destaddr);
 
 	msg.data = data;
 
 	// Prepare the "keepalive" message
 	// Idle using ISO "Tester Present" message
-	msg.len = 2;
+	msg.len = 1;
 	msg.src = d_l2_conn->diag_l2_srcaddr;
 	msg.dest = d_l2_conn->diag_l2_destaddr;
 	data[0] = DIAG_KW2K_SI_TP;
-	data[1] = 0x01;
 	d_l2_conn->diag_l2_request_id = data[0];
 
 	/*
@@ -979,7 +952,6 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 	 * from here
 	 */
 
-	diag_os_millisleep(400);
 	/* Send it, important to use l2_send as it updates the timers */
 	(void)diag_l2_send(d_l2_conn, &msg);
 	/*
@@ -992,8 +964,7 @@ static void diag_l2_proto_14230_timeout(struct diag_l2_conn *d_l2_conn) {
 		if (timeout < 100)
 			timeout = 100;
 	}
-//zzz
-	diag_os_millisleep(400);
+
 	(void)diag_l2_recv(d_l2_conn, timeout, NULL, NULL);
 	
 	return;
