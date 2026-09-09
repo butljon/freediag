@@ -136,8 +136,6 @@ int cmd_vag_connect(int argc __attribute__((unused)), char **argv __attribute__(
 
 	rv = do_l2_generic_start();
 	if (rv == 0) {
-	//xxx	global_conmode = p->conmode;
-	//xxx	global_protocol = p->protoID;
 		connected = 1;
 		global_state = STATE_CONNECTED;
 		printf("Connected to ECU %d.\n", set_destaddr);
@@ -197,15 +195,20 @@ int cmd_vag_request(int argc __attribute__((unused)), char **argv __attribute__(
 	}
 
 	msg.len = (argc-1);
- 	if (diag_calloc(&msg.data, msg.len)) {
- 	    fprintf(stderr, FLFMT "diag_calloc failed for KW1281\n", FL);
- 	    return DIAG_ERR_NOMEM;
- 	}
-
-	for(i=1; i<msg.len+1; i++) {
-	  buff[i-1] = atoi(argv[i]);
+	if (diag_calloc(&msg.data, msg.len)) {
+	    fprintf(stderr, FLFMT "diag_calloc failed for cmd_vag_request\n", FL);
+	    return DIAG_ERR_NOMEM;
 	}
+
+	for(i=1; i<msg.len+1; i++)
+	  	buff[i-1] = atoi(argv[i]);
 	memcpy(msg.data, &buff[0], msg.len*sizeof(uint8_t));
+
+	if(IS_KWP2K(global_l2_conn)) {
+		global_l2_conn->diag_l2_request_id = atoi(argv[1]);
+		msg.src = global_l2_conn->diag_l2_srcaddr;
+		msg.dest = global_l2_conn->diag_l2_destaddr;
+	}
 
 	(void) diag_l2_request(global_l2_conn, &msg, &errVal);
 	if(errVal < 0) {
@@ -213,14 +216,14 @@ int cmd_vag_request(int argc __attribute__((unused)), char **argv __attribute__(
 		return CMD_FAILED;
 	}
 	free(msg.data);
-
+		
 	return CMD_OK;
 
 }
 
 int cmd_vag_reqdtc(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
 
-	char buff[4], *buff2[3];
+	 char *buff[5];
 
 	if(argc != 1) {
 		fprintf(stderr, FLFMT "reqdtc does not support command line parameters\n", FL);
@@ -228,51 +231,44 @@ int cmd_vag_reqdtc(int argc __attribute__((unused)), char **argv __attribute__((
 	}
 
 	if(IS_KW1281(global_l2_conn)) {
-	    snprintf(buff, 4, "%d", DIAG_VAG_CMD_DTC_RQST);
-	    buff2[1] = buff;
+		buff[1] = malloc(sizeof(char)*2);
+		sprintf(buff[1], "%d", DIAG_VAG_CMD_DTC_RQST);
 		
-		return cmd_vag_request(2, buff2);
+		return cmd_vag_request(2, buff);
 	}
 	
 	if(IS_KWP2K(global_l2_conn)) {
-	    snprintf(buff, 4, "%d", DIAG_KW2K_SI_RDTC);
-	    buff2[1] = malloc(1);
-	    memcpy(buff2[1], &buff[0], 1);
-	    snprintf(buff, 4, "%d", 0xFF);
-	    buff2[2] = malloc(1);
-		memcpy(buff2[2], &buff[0], 1);
+		buff[1] = malloc(sizeof(char)*2);
+		sprintf(buff[1], "%d", DIAG_KW2K_SI_RDTCBS);
+		buff[2] = malloc(sizeof(char)*2);
+		sprintf(buff[2], "%d", 0x02);
+		buff[3] = malloc(sizeof(char)*2);
+		sprintf(buff[3], "%d", DIAG_KW2K_ALL_DTCS);
+		buff[4] = malloc(sizeof(char)*2);
+		sprintf(buff[4], "%d", DIAG_KW2K_ALL_DTCS);
 		
-		return cmd_vag_request(3, buff2);
+		return cmd_vag_request(5, buff);
 	}
 	
 }
 
 int cmd_vag_cleardtc(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
 
-	char buff[4], *buff2[3];
+	char *buff[3];
 
 	if(argc != 1) {
 		fprintf(stderr, FLFMT "cleardtc does not support command line parameters\n", FL);
 		return CMD_FAILED;
 	}
 
-	if(IS_KW1281(global_l2_conn)) {
-		snprintf(buff, 4, "%d", DIAG_VAG_CMD_DTC_CLEAR);
-		buff2[1] = buff;
-		
-		return cmd_vag_request(2, buff2);
-	}
+	buff[1] = malloc(sizeof(char)*2);
+	if(IS_KW1281(global_l2_conn))
+		sprintf(buff[1], "%d", DIAG_VAG_CMD_DTC_CLEAR);
 
-	if(IS_KWP2K(global_l2_conn)) {
-	    snprintf(buff, 4, "%d", DIAG_KW2K_SI_CDI);
-	    buff2[1] = malloc(1);
-	    memcpy(buff2[1], &buff[0], 1);
-	    snprintf(buff, 4, "%d", 0xFF);
-	    buff2[2] = malloc(1);
-		memcpy(buff2[2], &buff[0], 1);
-		
-		return cmd_vag_request(3, buff2);
-	}
+	if(IS_KWP2K(global_l2_conn))
+		sprintf(buff[1], "%d", DIAG_KW2K_SI_CDI);
+	
+	return cmd_vag_request(2, buff);
 
 }
 

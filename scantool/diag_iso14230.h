@@ -4,7 +4,6 @@
 /*
  *	freediag - Vehicle Diagnostic Utility
  *
- * CVSID $Id: diag_iso14230.h,v 1.2 2004/06/12 16:35:35 helliwell_cj Exp $
  *
  * Copyright (C) 2001 Richard Almeida & Ibex Ltd (rpa@ibex.co.uk)
  *
@@ -97,11 +96,8 @@ extern "C" {
  * Positive responses are  service ID + 0x40
  */
 #define DIAG_KW2K_RC_NR		0x7F	/* negative Response */
+#define DIAG_KW2K_RC_OK_SHIFT		0x3F	
 #define DIAG_KW2K_RC_RDDBLI	0x61	/* readDataByLocalId RSP */
-#define DIAG_KW2K_SI_STADS_OK	0x50	/* startDiagnosticSession */
-#define DIAG_KW2K_SI_REID_OK	0x5A	/* readEcuId */
-#define DIAG_KW2K_SI_TP_OK		0x7E	/* testerPresent */
-#define DIAG_KW2K_SI_STODS_OK	0x60	/* stopDiagnosticSession */
 
 /*
  * Service response codes
@@ -153,6 +149,8 @@ extern "C" {
 // ISO14230 ECU IDs
 #define DIAG_KW2K_ISO14230_ECU_ENGINE 0x10
 #define DIAG_KW2K_ISO14230_ECU_ABS 0x28
+
+#define DIAG_KW2K_ALL_DTCS 0xFF
 
 /* Exports */
 char *diag_l3_iso14230_decode_response(struct diag_msg *, char *, const size_t);

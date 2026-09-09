@@ -268,10 +268,13 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 	int dl;
 	uint8_t respId;
 
-	if (data[3] != DIAG_KW2K_SI_STADS_OK && !(data[3] == DIAG_KW2K_RC_NR 
-		&& data[4] == DIAG_KW2K_SI_REID && data[5] == DIAG_KW2K_RC_RCR_RP) 
-		&& data[3] != DIAG_KW2K_SI_REID_OK
-		&& data[3] != DIAG_KW2K_SI_TP_OK && data[3] != DIAG_KW2K_SI_STODS_OK) {
+	if (DIAG_KW2K_SI_STADS != (DIAG_KW2K_RC_OK_SHIFT & data[3]) && !(DIAG_KW2K_RC_NR == data[3] 
+		&& DIAG_KW2K_SI_REID == data[4] && DIAG_KW2K_RC_RCR_RP == data[5]) 
+		&& DIAG_KW2K_SI_REID != (DIAG_KW2K_RC_OK_SHIFT & data[3])
+		&& DIAG_KW2K_SI_TP != (DIAG_KW2K_RC_OK_SHIFT & data[3]) 
+		&& DIAG_KW2K_SI_STODS != (DIAG_KW2K_RC_OK_SHIFT & data[3])
+		&& DIAG_KW2K_SI_RDTC != (DIAG_KW2K_RC_OK_SHIFT & data[3]) 
+		&& DIAG_KW2K_SI_CDI != (DIAG_KW2K_RC_OK_SHIFT & data[3])) {
 			
 		int i;
 		printf("Inbound message check, len: %d, ", len);
@@ -330,10 +333,8 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 				return diag_iseterr(DIAG_ERR_INCDATA);
 			*hdrlen = 3;
 			*datalen = dl;
-			if (dest)
-				*dest = data[1];
-			if (source)
-				*source = data[2];
+			*dest = data[1];
+			*source = data[2];
 			respId = data[3];
 			break;
 		case 0x00:
@@ -391,14 +392,14 @@ void l2_iso14230_data_rcv(void *handle __attribute__((unused)), struct diag_msg 
 
 	tmsg = msg;
 	while(tmsg) {
-		switch (tmsg->data[0]) {
-			case DIAG_KW2K_SI_STADS_OK:
-	  		case DIAG_KW2K_SI_TP_OK:
-	  		case DIAG_KW2K_RC_NR:
-			case DIAG_KW2K_SI_STODS_OK:
+		switch (DIAG_KW2K_RC_OK_SHIFT & tmsg->data[0]) {
+			case DIAG_KW2K_SI_STADS:
+	  		case DIAG_KW2K_SI_TP:
+	  		case DIAG_KW2K_RC_OK_SHIFT: // actually DIAG_KW2K_RC_NR: but as doing DIAG_KW2K_RC_OK_SHIFT & tmsg->data[0] ...
+			case DIAG_KW2K_SI_STODS:
 		  		break;
 
-	  		case DIAG_KW2K_RC_RDDBLI:
+	  		case DIAG_KW2K_SI_RDDBLI:
 		  		for(i=2; i< tmsg->len; i+=3) {
 					printf("(Sensor) block %d, block id: <%x>, ", ((i-2)/3 +1), tmsg->data[i]);
 			  		printf("sensor bytes: <%x>", tmsg->data[i+1]);
@@ -590,12 +591,12 @@ static int diag_l2_proto_14230_int_recv(struct diag_l2_conn *d_l2_conn, int time
 			rv = diag_l2_proto_14230_decode(tmsg->data, tmsg->len,
 				&hdrlen, &datalen, &source, &dest, dp->first_frame, d_l2_conn->diag_l2_request_id);
 
-//zzz			if(source != dp->dstaddr || dest != dp->srcaddr) {
-//			fprintf(stderr, FLFMT "Connection (src, dest): (%d, %d), but received message for (src, dest): (%d, %d)\n",
-//					FL, dp->srcaddr, dp->dstaddr, source, dest);
-//					rv = -1;
-//			}
-				
+			if(source != d_l2_conn->diag_l2_destaddr || dest != d_l2_conn->diag_l2_srcaddr) {
+			fprintf(stderr, FLFMT "Connection (src, dest): (%d, %d), but received message for (src, dest): (%d, %d)\n",
+					FL, d_l2_conn->diag_l2_srcaddr, d_l2_conn->diag_l2_destaddr, source, dest);
+					rv = -1;
+			}
+	
 			if (rv < 0)		/* decode failure */
 				return diag_iseterr(rv);
 
@@ -669,37 +670,50 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
 
 	if(dp->state > STATE_CLOSED) {
 
- 	  if (diag_calloc(&msg.data, 1)) {
- 	    fprintf(stderr,
- 		 	FLFMT "diag_calloc failed for StopDiagnosticSession service request\n", FL);
- 	    return(DIAG_ERR_NOMEM);
- 	  }
- 	  msg.len = 1;
- 	  msg.src = pX->diag_l2_srcaddr;
- 	  msg.dest = pX->diag_l2_destaddr;
- 	  buff = DIAG_KW2K_SI_STODS;
-      memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
-      pX->diag_l2_request_id = buff;
+		dp->state = STATE_CLOSED;
+		if (diag_calloc(&msg.data, 1)) {
+ 	    	fprintf(stderr,
+ 		 	FLFMT "diag_calloc failed for stopcomms request\n", FL);
+ 	    	return DIAG_ERR_NOMEM;
+ 	  	}
+ 	  	msg.len = 1;
+ 	  	msg.src = pX->diag_l2_srcaddr;
+ 	  	msg.dest = pX->diag_l2_destaddr;
+ 	  	buff = DIAG_KW2K_SI_STODS;
+      	memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
+      	pX->diag_l2_request_id = buff;
 
-	  rv = diag_l2_send(pX, &msg);
-	  if (rv < 0) {
-		fprintf(stderr, FLFMT "failed to send StopDiagnosticSession service request\n", FL);
-		return rv;
-	  }
-	  free(msg.data);
+	  	rv = diag_l2_send(pX, &msg);
+	  	if (rv < 0) {
+			fprintf(stderr, FLFMT "failed to send StopDiagnosticSession service request\n", FL);
+			return rv;
+	  	}
 
-	  diag_os_millisleep(25);
-	  rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-
+    	diag_os_millisleep(pX->diag_l2_p2min);
+	  	rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 // would like to check return code, but guess need do that in the callback by passing a HANDLE
 //	  tmsg = pX->diag_msg;
 //	  if((tmsg->data[0] != (DIAG_KW2K_SI_STODS+0x40))
 //	    && (tmsg->len != 1)) {
-	  if(rv <0) {
-		  fprintf(stderr, FLFMT "StopDiagnosticSession service failed\n", FL);
-		  return -1;
-	  }	  
-	  dp->state = STATE_CLOSED;
+
+		buff = DIAG_KW2K_SI_SPR;
+		memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
+		pX->diag_l2_request_id = buff;
+		diag_os_millisleep(pX->diag_l2_p2min);
+		rv = diag_l2_send(pX, &msg);
+		if (rv < 0) {
+			fprintf(stderr, FLFMT "failed to send StopCommunication service request\n", FL);
+			return rv;
+		}
+		free(msg.data);
+
+		diag_os_millisleep(pX->diag_l2_p2min);
+		rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+	
+		if(rv <0) {
+			fprintf(stderr, FLFMT "stopcomms request failed\n", FL);
+		  	return -1;
+	  	}	  
 	}
 
 	return 0;
@@ -716,7 +730,7 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
  * We also wait p3 ms
  */
 static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg) {
-	int rv, csum;
+	int rv=0, csum;
 	unsigned int i;
 	size_t len;
 	uint8_t buf[MAXRBUF];
@@ -782,14 +796,20 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 	if (dp->state == STATE_ESTABLISHED)
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
-	if(buf[3] != DIAG_KW2K_SI_TP && buf[3] != DIAG_KW2K_SI_STADS && buf[3] != DIAG_KW2K_SI_REID
-		&& buf[3] != DIAG_KW2K_SI_STODS) {
-		printf("Outbound message check, len: %d, ", len);
+	if(DIAG_KW2K_SI_TP != buf[3] && DIAG_KW2K_SI_STADS != buf[3] && DIAG_KW2K_SI_REID != buf[3]
+		&& DIAG_KW2K_SI_STODS != buf[3] 
+		//zzz && DIAG_KW2K_SI_RDTC != buf[3] && DIAG_KW2K_SI_CDI != buf[3]
+		) {
+		printf("Outbound message check, len: %d, ", (int) len);
 			for (i=0; i< len; i++)
 				printf("<%x>", buf[i]);
 			printf("\n");
 	}
-	rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
+//zzz temporary filter what actually going out to ECU!
+	if(DIAG_KW2K_SI_TP == buf[3] || DIAG_KW2K_SI_STADS == buf[3] || DIAG_KW2K_SI_REID == buf[3]
+		|| DIAG_KW2K_SI_STODS == buf[3] || DIAG_KW2K_SI_RDTC == buf[3] || DIAG_KW2K_SI_CDI == buf[3]
+	|| DIAG_KW2K_SI_RDTCBS == buf[3])
+		rv = diag_l1_send (d_l2_conn->diag_link->diag_l2_dl0d, 0,
 		buf, len, d_l2_conn->diag_l2_p4min);
 
 	if (diag_l2_debug & DIAG_DEBUG_WRITE)
