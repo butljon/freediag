@@ -605,7 +605,9 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
      	    return(DIAG_ERR_NOMEM);
      	}
     	cbuf[0] = DIAG_KW2K_SI_STADS;
-    	cbuf[1] = 0x89;
+		// VAG ABS module 1C0907379K response to <82><28><f1><10><85><30> DIAG_KW2K_VAG_PROG_MODE --> <83><f1><28><7f><10><11><3c>
+		// buf[1] = DIAG_KW2K_VAG_PROG_MODE; 
+		cbuf[1] = DIAG_KW2K_VAG_DIAG_MODE;
     	d_l2_conn->diag_l2_request_id = cbuf[0];
     	memcpy(msg.data, &cbuf[0], msg.len*sizeof(uint8_t));
     	msg.src = d_l2_conn->diag_l2_srcaddr;
@@ -651,8 +653,7 @@ static int diag_l2_proto_vag_startcomms(struct diag_l2_conn *d_l2_conn, flag_typ
 		diag_os_millisleep(d_l2_conn->diag_l2_p2min);
     	rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
 		
-		dp_iso14230->state = STATE_ESTABLISHED;
-		
+		dp_iso14230->state = STATE_ESTABLISHED;	
 	}
 
 	if((d_l2_conn->diag_l2_kb1 != 0x01 || d_l2_conn->diag_l2_kb2 != 0x0a) && d_l2_conn->diag_l2_kb2 != 0x0f) {

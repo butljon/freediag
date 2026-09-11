@@ -238,16 +238,28 @@ int cmd_vag_reqdtc(int argc __attribute__((unused)), char **argv __attribute__((
 	}
 	
 	if(IS_KWP2K(global_l2_conn)) {
+// VAG ABS module 1C0907379K <84><28><f1><18><2><ff><0><b6> worked!
 		buff[1] = malloc(sizeof(char)*2);
 		sprintf(buff[1], "%d", DIAG_KW2K_SI_RDTCBS);
 		buff[2] = malloc(sizeof(char)*2);
-		sprintf(buff[2], "%d", 0x02);
+		sprintf(buff[2], "%d", 0x2);
 		buff[3] = malloc(sizeof(char)*2);
-		sprintf(buff[3], "%d", DIAG_KW2K_ALL_DTCS);
+		sprintf(buff[3], "%d", DIAG_KW2K_VAG_ALL_DTCS);
 		buff[4] = malloc(sizeof(char)*2);
-		sprintf(buff[4], "%d", DIAG_KW2K_ALL_DTCS);
-		
+		sprintf(buff[4], "%d", 0x0);
+
 		return cmd_vag_request(5, buff);
+		
+		/*
+// VAG ABS module 1C0907379K response to <83><28><f1><13><ff><0><ae> --> <83><f1><28><7f><13><11><3f>
+		buff[1] = malloc(sizeof(char)*2);
+		sprintf(buff[1], "%d", DIAG_KW2K_SI_RDTC);
+		buff[2] = malloc(sizeof(char)*2);
+		sprintf(buff[2], "%d", DIAG_KW2K_VAG_ALL_DTCS);
+		buff[3] = malloc(sizeof(char)*2);
+		sprintf(buff[3], "%d", 0x0);
+
+		return cmd_vag_request(4, buff); */
 	}
 	
 }

@@ -45,7 +45,7 @@ struct diag_l2_14230 {
 	uint8_t srcaddr;	/* Src address used */
 	uint8_t dstaddr;	/* Dest address used (for connect) */
 	uint16_t modeflags;	/* Flags */
-
+	
 	uint8_t state;
 
 	uint8_t first_frame;	/* First frame flag, used mainly for

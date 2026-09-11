@@ -273,8 +273,9 @@ static int diag_l2_proto_14230_decode(uint8_t *data, int len,
 		&& DIAG_KW2K_SI_REID != (DIAG_KW2K_RC_OK_SHIFT & data[3])
 		&& DIAG_KW2K_SI_TP != (DIAG_KW2K_RC_OK_SHIFT & data[3]) 
 		&& DIAG_KW2K_SI_STODS != (DIAG_KW2K_RC_OK_SHIFT & data[3])
-		&& DIAG_KW2K_SI_RDTC != (DIAG_KW2K_RC_OK_SHIFT & data[3]) 
-		&& DIAG_KW2K_SI_CDI != (DIAG_KW2K_RC_OK_SHIFT & data[3])) {
+	//zzz	&& DIAG_KW2K_SI_RDTC != (DIAG_KW2K_RC_OK_SHIFT & data[3]) 
+	//	&& DIAG_KW2K_SI_CDI != (DIAG_KW2K_RC_OK_SHIFT & data[3])
+	) {
 			
 		int i;
 		printf("Inbound message check, len: %d, ", len);
@@ -691,29 +692,12 @@ static int diag_l2_proto_14230_stopcomms(struct diag_l2_conn* pX) {
 
     	diag_os_millisleep(pX->diag_l2_p2min);
 	  	rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
+
 // would like to check return code, but guess need do that in the callback by passing a HANDLE
 //	  tmsg = pX->diag_msg;
 //	  if((tmsg->data[0] != (DIAG_KW2K_SI_STODS+0x40))
 //	    && (tmsg->len != 1)) {
-
-		buff = DIAG_KW2K_SI_SPR;
-		memcpy(msg.data, &buff, msg.len*sizeof(uint8_t));
-		pX->diag_l2_request_id = buff;
-		diag_os_millisleep(pX->diag_l2_p2min);
-		rv = diag_l2_send(pX, &msg);
-		if (rv < 0) {
-			fprintf(stderr, FLFMT "failed to send StopCommunication service request\n", FL);
-			return rv;
-		}
-		free(msg.data);
-
-		diag_os_millisleep(pX->diag_l2_p2min);
-		rv = diag_l2_recv(pX, pX->diag_l2_p3min, l2_iso14230_data_rcv, NULL);
-	
-		if(rv <0) {
-			fprintf(stderr, FLFMT "stopcomms request failed\n", FL);
-		  	return -1;
-	  	}	  
+// }
 	}
 
 	return 0;
@@ -797,7 +781,7 @@ static int diag_l2_proto_14230_send(struct diag_l2_conn *d_l2_conn, struct diag_
 		diag_os_millisleep(d_l2_conn->diag_l2_p3min);
 
 	if(DIAG_KW2K_SI_TP != buf[3] && DIAG_KW2K_SI_STADS != buf[3] && DIAG_KW2K_SI_REID != buf[3]
-		&& DIAG_KW2K_SI_STODS != buf[3] 
+		&& DIAG_KW2K_SI_STODS != buf[3] && DIAG_KW2K_SI_RDTCBS != buf[3] 
 		//zzz && DIAG_KW2K_SI_RDTC != buf[3] && DIAG_KW2K_SI_CDI != buf[3]
 		) {
 		printf("Outbound message check, len: %d, ", (int) len);
@@ -880,6 +864,7 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
 	}
 
 #if 1
+	diag_os_millisleep(d_l2_conn->diag_l2_p2min);
 	rv = diag_l2_recv(d_l2_conn,
 		d_l2_conn->diag_l2_p2max + 10, l2_iso14230_data_rcv, NULL);
 
@@ -891,6 +876,7 @@ diag_l2_proto_14230_request(struct diag_l2_conn *d_l2_conn, struct diag_msg *msg
 	return NULL;
 #else	
 	while (1) {
+		
 		rv = diag_l2_proto_14230_int_recv(d_l2_conn,
 			d_l2_conn->diag_l2_p2max + 10, NULL, NULL);
 

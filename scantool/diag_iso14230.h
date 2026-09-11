@@ -150,7 +150,11 @@ extern "C" {
 #define DIAG_KW2K_ISO14230_ECU_ENGINE 0x10
 #define DIAG_KW2K_ISO14230_ECU_ABS 0x28
 
-#define DIAG_KW2K_ALL_DTCS 0xFF
+#define DIAG_KW2K_VAG_ALL_DTCS 0xFF
+// see https://github.com/baconwaifu/PyVCDS/blob/master/kwp.py:
+#define DIAG_KW2K_VAG_DIAG_MODE 0x89
+#define DIAG_KW2K_VAG_PROG_MODE 0x85
+#define DIAG_KW2K_VAG_UDS_MODE 0x2
 
 /* Exports */
 char *diag_l3_iso14230_decode_response(struct diag_msg *, char *, const size_t);

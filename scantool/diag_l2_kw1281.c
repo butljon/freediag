@@ -32,16 +32,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
 
 #include "diag.h"
 #include "diag_err.h"
 #include "diag_tty.h"
 #include "diag_l1.h"
 #include "diag_l2.h"
-#include "diag_l2_raw.h"
 #include "diag_vag.h"
-#include "diag_l2_iso9141.h"
 #include "diag_l2_kw1281.h" /* prototypes for this file */
 
 /*
@@ -941,7 +938,8 @@ static struct diag_msg *diag_l2_proto_kw1281_request(struct diag_l2_conn *d_l2_c
 	        }
 
 	    /* And wait for response */
-	        rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
+			diag_os_millisleep(d_l2_conn->diag_l2_p2min);
+			rv = diag_l2_recv(d_l2_conn, d_l2_conn->diag_l2_p3max, l2_kw1281_data_rcv, NULL);
 	        if(rv < 0) {
 		/* Error */
 		        fprintf(stderr, FLFMT "failed to receive messages\n", FL);
